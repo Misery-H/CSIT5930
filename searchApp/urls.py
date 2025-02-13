@@ -1,0 +1,15 @@
+# -*- coding:utf-8 -*-　
+# Last modify: Liu Wentao
+# Description: Skeleton for fine-tuning with SemEval data on track A
+# Note:
+
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    # ex: /polls/
+    path("", views.search_page, name="search_page"),
+    path('suggestions', views.search_suggestions, name='search_suggestions'),
+    path('result/', views.search_results, name='search_results'),
+]
