@@ -12,4 +12,6 @@ urlpatterns = [
     path("", views.search_page, name="search_page"),
     path('suggestions', views.search_suggestions, name='search_suggestions'),
     path('result/', views.search_results, name='search_results'),
+    path('ai-analysis/', views.ai_analysis, name='ai_analysis'),
+
 ]
