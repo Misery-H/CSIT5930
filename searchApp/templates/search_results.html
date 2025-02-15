@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ query }} - deepsearch</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/fav.png' %}" type="image/x-icon">
+    <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!--    Bootstrap-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body>
+<!-- Header with Logo and Search -->
+<div class="results-header">
+    <div class="header-content">
+        <a href="/search" class="result-logo">
+            <img src="{% static 'images/logo.png' %}" alt="Site Logo">
+        </a>
+        <div class="search-container results-search">
+            <form action="{% url 'search_results' %}" method="GET">
+                    <textarea
+                            id="search-input"
+                            name="q"
+                            rows="1"
+                            wrap="soft"
+                            placeholder="Search..."
+                    >{{ query }}</textarea>
+                <button id="search-button" type="submit">
+                    <img src="{% static 'images/search-icon.svg' %}" alt="Search" class="search-icon">
+                </button>
+                <div id="suggestions-container"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Results Container -->
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Left Results Section (3/5) -->
+        <div class="col-md-7">
+            <div class="results-container">
+                <p class="results-count">About {{ results|length }} results (in {{ time_consumption }} seconds)</p>
+
+                {% for result in results %}
+                    <div class="result-item mb-4">
+                        <a href="{{ result.url }}" class="result-url">{{ result.display_url }}</a>
+                        <h3 class="result-title">
+                            <a href="{{ result.url }}">{{ result.title }}</a>
+                        </h3>
+                        <p class="result-snippet">{{ result.snippet }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="ai-conclusion-container p-4">
+                <h5>AI Conclusion†</h5>
+                <div class="azure-attribution">
+                    <small class="text-muted">
+                        Powered by
+                        <a href="https://bailian.console.aliyun.com/" target="_blank" class="text-decoration-none">
+                            Alibaba Cloud
+                        </a>
+                        and
+                        <a href="https://www.deepseek.com/" target="_blank" class="text-decoration-none">
+                            DeepSeek AI
+                        </a>
+                    </small>
+                </div>
+                <div id="ai-content" class="ai-streaming-content"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        const originalQuery = "{{ query|escapejs }}".trim().toLowerCase();
+        let searchTimeout;
+
+        const query = new URLSearchParams(window.location.search).get('q');
+        if (query) {
+            loadAIConclusion(query);
+        }
+
+        function autoResize() {
+            const textarea = $('#search-input');
+            textarea.css('height', 'auto').css('height', textarea.prop('scrollHeight') + 'px');
+        }
+
+        function isSameQuery(currentQuery) {
+            return currentQuery.trim().toLowerCase() === originalQuery;
+        }
+
+        function handleSuggestions(query) {
+            clearTimeout(searchTimeout);
+
+            if (isSameQuery(query)) {
+                $('#suggestions-container').hide();
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                if (query.length > 0) {
+                    $.ajax({
+                        url: "{% url 'search_suggestions' %}",
+                        data: {'q': query},
+                        success: function (data) {
+                            const container = $('#suggestions-container');
+                            container.empty();
+
+                            if (data.suggestions.length > 0 && !isSameQuery(query)) {
+                                data.suggestions.forEach(s => {
+                                    container.append(`<div class="suggestion-item">${s}</div>`);
+                                });
+                                container.show();
+                            } else {
+                                container.hide();
+                            }
+                        },
+                        error: function (xhr) {
+                            console.error('Error:', xhr.statusText);
+                        }
+                    });
+                } else {
+                    $('#suggestions-container').hide();
+                }
+            }, 300);
+        }
+
+        // Event handlers
+        $('#search-input')
+            .on('input', function () {
+                autoResize();
+                handleSuggestions($(this).val());
+            })
+            .on('focus', function () {
+                const query = $(this).val().trim();
+                if (query.length > 0 && !isSameQuery(query)) {
+                    $('#suggestions-container').show();
+                }
+            })
+            .on('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#suggestions-container').hide();
+                    $(this).closest('form').submit();
+                }
+            });
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.search-container').length) {
+                $('#suggestions-container').hide();
+            }
+        });
+
+        $('#suggestions-container').on('click', '.suggestion-item', function () {
+            const suggestion = $(this).text().trim();
+            $('#search-input').val(suggestion).trigger('input');
+            $('form').submit();
+        });
+
+        autoResize();
+        $('#search-input').focus();
+    });
+
+    function loadAIConclusion(query) {
+        const aiContent = document.getElementById('ai-content');
+        aiContent.innerHTML = ''; // Clear previous content
+
+        fetch(`{% url 'ai_analysis' %}?q=${encodeURIComponent(query)}`)
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                function processStream({done, value}) {
+                    if (done) return;
+
+                    // Append new content
+                    aiContent.innerHTML += decoder.decode(value);
+
+                    // Continue reading
+                    return reader.read().then(processStream);
+                }
+
+                return reader.read().then(processStream);
+            })
+            .catch(error => {
+                console.error('Error loading AI analysis:', error);
+                aiContent.innerHTML = '<p class="text-danger">Failed to load AI analysis</p>';
+            });
+    }
+
+</script>
+
+</body>
+</html>
