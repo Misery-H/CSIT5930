@@ -174,9 +174,10 @@ cython_debug/
 #.idea/
 /home/
 
-*.html
+
 index.json
 relations.txt
 urls.txt
 
 
+/pages/

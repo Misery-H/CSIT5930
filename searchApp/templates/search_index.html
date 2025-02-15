@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>deepsearch</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/fav.png' %}" type="image/x-icon">
+    <link rel="stylesheet" href="{% static 'css/search.css' %}">
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav class="navbar">
+    <div class="nav-container">
+        <a href="/search" class="nav-logo">
+            <img src="{% static 'images/nav-logo.png' %}" alt="Site Logo">
+        </a>
+        <div class="nav-links">
+            <a href="/pages" class="nav-link">Pages</a>
+            <a href="/about" class="nav-link">About</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-container">
+    <!-- Logo Section -->
+    <div class="logo-container">
+        <img src="{% static 'images/logo.png' %}" alt="Site Logo" class="logo">
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-container">
+                <textarea
+                        id="search-input"
+                        rows="1"
+                        placeholder="Search..."
+                        wrap="soft"
+                ></textarea>
+            <button id="search-button" type="button">
+                <img src="{% static 'images/search-icon.svg' %}" alt="Search" class="search-icon">
+            </button>
+            <div id="suggestions-container"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Copyright Footer -->
+<footer class="copyright-footer">
+    <p>&copy; 2025 CSIT5930. All rights reserved.</p>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        let searchTimeout;
+
+        // Auto-resize textarea
+        function autoResize() {
+            const textarea = $('#search-input');
+            textarea.css('height', 'auto').css('height', textarea.prop('scrollHeight') + 'px');
+        }
+
+        function performFormalSearch() {
+            const query = $('#search-input').val().trim();
+            if (query) {
+                window.location.href = `/search/result?q=${encodeURIComponent(query)}`;
+            }
+        }
+
+        // Handle input events
+        function handleSearch() {
+            const query = $('#search-input').val().trim();
+            clearTimeout(searchTimeout);
+
+            if (query.length === 0) {
+                $('#suggestions-container').empty().hide();
+                return;
+            }
+
+            $('#suggestions-container').on('click', '.suggestion-item', function () {
+                const suggestionText = $(this).text().trim();
+                $('#search-input').val(suggestionText).trigger('input');
+                performFormalSearch();
+            });
+
+
+            searchTimeout = setTimeout(() => {
+                $.ajax({
+                    url: "{% url 'search_suggestions' %}",
+                    data: {q: query},
+                    success: function (data) {
+                        const suggestions = data.suggestions;
+                        const container = $('#suggestions-container');
+
+                        container.empty();
+                        if (suggestions.length > 0) {
+                            suggestions.forEach(s => {
+                                container.append(`<div class="suggestion-item">${s}</div>`);
+                            });
+                            container.show();
+                        } else {
+                            container.hide();
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error('Error:', xhr.statusText);
+                    }
+                });
+            }, 200);
+        }
+
+        // Event listeners
+        $('#search-input')
+            .on('input', function () {
+                autoResize();
+                handleSearch();
+            })
+            // Modified code
+            .on('focus', function () {
+                const query = $(this).val().trim();
+                if (query.length > 0) {
+                    $('#suggestions-container').show();
+                } else {
+                    $('#suggestions-container').hide();
+                }
+            })
+            .on('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSearch();
+                }
+            });
+
+        $('#search-button').click(performFormalSearch);
+
+        $('#search-input').on('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                performFormalSearch();
+            }
+        });
+
+        // Click outside handler
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.search-container').length) {
+                $('#suggestions-container').hide();
+            }
+        });
+
+        // Initialize
+        autoResize();
+    });
+</script>
+</body>
+</html>
