@@ -34,6 +34,28 @@
 
 ## Updates
 
+### **20250215**
+
+Link your django to local MySQL service!
+
+About installing MySQL, please refer to [Orcale MySQL: installer](https://dev.mysql.com/downloads/installer/)
+
+The username is hard-coded as `django`, database name as `search_engine`, port as `3306`
+
+Please set your own mysql password in env variables, whose key is `MYSQL_PASSWORD`
+
+For more details, please refer to `djangoProject/settings.py`
+
+After configuring MySQL, please run:
+
+```commandline
+python manage.py migrate
+```
+
+for initialization of django database, it is suggested to create a superuser at your local project, please refer to [Create superuser](https://docs.djangoproject.com/en/5.1/intro/tutorial02/#introducing-the-django-admin).
+
+
+
 ### **20250214**
 
 #### About running AI suggestion
