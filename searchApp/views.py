@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET
 from searchApp.utils import *
 from django.http import StreamingHttpResponse
+from django.utils.html import escape
 
 
 def search_page(request):
@@ -25,6 +26,9 @@ def search_suggestions(request):
             f"WIP: suggestion for {query} 4",
             f"WIP: suggestion for {query} 5",
         ]
+
+    for i, suggestion in enumerate(suggestions):
+        suggestions[i] = escape(suggestion)
 
     return JsonResponse({'suggestions': suggestions})
 
