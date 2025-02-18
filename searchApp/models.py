@@ -8,6 +8,7 @@ class Document(models.Model):
     description = models.TextField(blank=True)
     content = models.TextField()
     crawl_time = models.DateTimeField(auto_now_add=True)
+    tf_max = models.IntegerField(default=1)
 
     class Meta:
         indexes = [
@@ -29,7 +30,6 @@ class Term(models.Model):
 class InvertedIndex(models.Model):
     term = models.ForeignKey(Term, on_delete=models.CASCADE)
     document = models.ForeignKey(Document, on_delete=models.CASCADE)
-    tf_max = models.IntegerField(default=1)
     tf = models.IntegerField(default=1)
 
     class Meta:
