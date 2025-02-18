@@ -33,9 +33,13 @@ class InvertedIndex(models.Model):
     tf = models.IntegerField(default=1)
 
     class Meta:
-        indexes = [
-            models.Index(fields=['term']),
+        constraints = [
+            models.UniqueConstraint(
+                name='unique_term_doc',
+                fields=['term_id', 'document_id'],
+            )
         ]
+
 
 class UrlLinkage(models.Model):
     from_document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='from_document')
