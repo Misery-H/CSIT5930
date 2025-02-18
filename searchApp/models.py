@@ -36,3 +36,7 @@ class InvertedIndex(models.Model):
         indexes = [
             models.Index(fields=['term']),
         ]
+
+class UrlLinkage(models.Model):
+    from_document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='from_document')
+    to_document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='to_document')
