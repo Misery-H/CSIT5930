@@ -44,3 +44,12 @@ class InvertedIndex(models.Model):
 class UrlLinkage(models.Model):
     from_document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='from_document')
     to_document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='to_document')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                name='unique_from_to',
+                fields=['from_document', 'to_document'],
+            )
+        ]
+
