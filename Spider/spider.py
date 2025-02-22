@@ -38,6 +38,7 @@ class WebSpider:
         self.index_file = index_file
         self.data_dir = data_dir
         self.index = {}
+        self.update_index = {}
         self.page_id = 1
         self.queue = []
         self.visited = set()
@@ -47,8 +48,8 @@ class WebSpider:
         self.stopwords_file = stopwords_file
 
         os.makedirs(data_dir, exist_ok=True)
-        #TODO:can't compare offset-naive and offset-aware datetimes error occurs in func needs_fetch
-        # self.load_index()
+
+        self.load_index()
 
     def load_index(self):
         self.index = self.dBHelper.get_all_documents()
@@ -70,9 +71,10 @@ class WebSpider:
             response.raise_for_status()
             if 'Last-Modified' not in response.headers:
                 return False
-            current_lm = parsedate_to_datetime(response.headers['Last-Modified'])
+            current_lm_utc = parsedate_to_datetime(response.headers['Last-Modified'])
+            east8_tz = datetime.timezone(datetime.timedelta(hours=8))  # 定义东八区
+            current_lm = current_lm_utc.astimezone(east8_tz).replace(tzinfo=None)
             indexed_lm = datetime.datetime.fromisoformat(self.index[url]['last_modify'])
-
             return current_lm > indexed_lm
 
         # except (requests.exceptions.RequestException, ValueError) as e:
@@ -160,7 +162,7 @@ class WebSpider:
         self.queue.append(self.start_url)
         count = 0
         #FIFO
-        while self.queue and count < self.max_pages:
+        while self.queue and self.page_id < self.max_pages:
             current_url = self.queue.pop(0)
             if current_url in self.visited:
                 continue
@@ -168,6 +170,7 @@ class WebSpider:
 
             #last_modified has changed, need to fetch the page again
             if not self.needs_fetch(current_url):
+                self.visited.add(current_url)
                 continue
 
             html, last_modified = self.fetch_page(current_url)
@@ -177,16 +180,21 @@ class WebSpider:
             tfmax = self.tfmax(html2txt)
             # Update or create index entry
             if current_url in self.index:
-                #TODO: update all content
                 page_id = self.index[current_url]['id']
                 if last_modified:
-                    self.index[current_url]['last_modify'] = parsedate_to_datetime(last_modified).isoformat()
+                    self.update_index[current_url] = {
+                        'id': page_id,
+                        'content_hash': hashlib.sha256(html2txt.encode('utf-8')).hexdigest(),
+                        'content': html2txt,
+                        'title': title,
+                        'tf_max': tfmax,
+                        'last_modify': parsedate_to_datetime(last_modified).isoformat()
+                    }
 
             else:
                 page_id = self.page_id
                 self.index[current_url] = {
                     'id': page_id,
-                    #TODO: there is no last_modified item in database schema
                     'last_modify': parsedate_to_datetime(last_modified).isoformat() if last_modified
                     else datetime.datetime.now().isoformat(),
                     'content_hash': hashlib.sha256(html2txt.encode('utf-8')).hexdigest(),
@@ -213,9 +221,22 @@ class WebSpider:
                 if page_id not in self.parent_child[parent_id]:
                     self.parent_child[parent_id].append(page_id)
 
-            count += 1
+
 
         self.save2DB()
+        self.update2DB()
+
+    def update2DB(self):
+        """
+        if a website has been updated,
+        1. we should update its content in the table Document
+        2. its child-page may be changed, we should delete all outdated information in the table UrlLinkage
+        :return:
+        """
+        if self.update_index:
+            for url, val in self.update_index.items():
+                self.dBHelper.update_document(val)
+                self.dBHelper.delete_url_linkage(val['id'])
 
 
 if __name__ == "__main__":

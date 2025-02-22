@@ -9,6 +9,7 @@ class Document(models.Model):
     content = models.TextField()
     crawl_time = models.DateTimeField(auto_now_add=True)
     tf_max = models.IntegerField(default=1)
+    last_modify = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [

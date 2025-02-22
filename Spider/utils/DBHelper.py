@@ -61,8 +61,8 @@ class DBHelper:
                 # IGNORE is added here based on verifying unique content_hash to avoid duplication.
                 sql = """
                     INSERT IGNORE INTO searchapp_document
-                    (url, content_hash, title, description, content, crawl_time, tf_max)
-                    VALUES (%s, %s, %s, %s, %s, NOW(), %s)
+                    (url, content_hash, title, description, content, crawl_time, tf_max,last_modify)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s)
                 """
 
                 cursor.execute(sql, (
@@ -72,6 +72,7 @@ class DBHelper:
                     document.get("description"),
                     document.get("content"),
                     document.get("tf_max"),
+                    document.get("last_modify"),
                 ))
 
                 if cursor.lastrowid == 0:
@@ -82,7 +83,46 @@ class DBHelper:
                     doc_id = cursor.lastrowid
 
         return doc_id
+    def update_document(self, document):
+        """
+        update_document: Update a document in the database. The records are deduplicated based on content_hash.
+        Args:
+            document: a python dictionary.
 
+        Returns: document id
+
+        """
+        if not document:
+            return -1
+
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                # IGNORE is added here based on verifying unique content_hash to avoid duplication.
+                sql = """
+                    UPDATE searchapp_document
+                    SET url = %s, content_hash = %s, title = %s, description = %s, content = %s, crawl_time = NOW(), tf_max = %s,last_modify = %s
+                    WHERE content_hash = %s
+                """
+
+                cursor.execute(sql, (
+                    document.get("url"),
+                    document.get("content_hash"),
+                    document.get("title"),
+                    document.get("description"),
+                    document.get("content"),
+                    document.get("tf_max"),
+                    document.get("last_modify"),
+                    document.get("content_hash"),
+                ))
+
+                if cursor.lastrowid == 0:
+                    cursor.execute("SELECT id FROM searchapp_document WHERE content_hash = %s",
+                                   (document.get("content_hash")))
+                    doc_id = cursor.fetchone()[0]
+                else:
+                    doc_id = cursor.lastrowid
+
+        return doc_id
     def _get_or_create_term(self, term, conn):
         """
         _get_or_create_term: maintain a term in the "term" table, with its document frequency.
@@ -197,6 +237,19 @@ class DBHelper:
                    VALUES (%s, %s)
                 """
                 cursor.execute(sql, (from_doc_id, to_doc_id))
+    def delete_url_linkage(self, from_doc_id):
+        """
+        delete_url_linkage: delete a url linkage to the document.
+        Args:
+            from_doc_id: url source document id
+            to_doc_id: url point to document id
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                sql = """
+                   DELETE FROM searchapp_urllinkage WHERE from_document_id = %s 
+                """
+                cursor.execute(sql, (from_doc_id))
     def get_all_documents(self):
         """
         get_all_documents: retrieve all documents from the database.
@@ -212,7 +265,8 @@ class DBHelper:
                         d.description,
                         d.content,
                         d.crawl_time,
-                        d.tf_max
+                        d.tf_max,
+                        d.last_modify
                     FROM searchapp_document d
                     """
                 )
@@ -225,6 +279,7 @@ class DBHelper:
                         'content': row[3],
                         'crawl_time': row[4].isoformat() if row[5] else None,
                         'tf_max': row[5],
+                        'last_modify': row[6].isoformat() if row[6] else None,
                     }
 
                 return documents
