@@ -1,11 +1,17 @@
+import hashlib
 import requests
 import os
 import json
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from email.utils import parsedate_to_datetime
-from collections import defaultdict
+from collections import defaultdict, Counter
 import datetime
+from utils.DBHelper import DBHelper
+import re
+#to ignore warning
+import shutup
+shutup.please()
 
 
 class WebSpider:
@@ -25,7 +31,7 @@ class WebSpider:
     child_parents: a dictionary to store the child-parent relationships
 
     """
-    def __init__(self, start_url, max_pages, index_file='index.json', data_dir='pages'):
+    def __init__(self, start_url, max_pages, index_file='index.json', data_dir='pages', stopwords_file='stopwords.txt'):
         self.start_url = start_url
         self.max_pages = max_pages
         self.domain = urlparse(start_url).netloc
@@ -37,16 +43,16 @@ class WebSpider:
         self.visited = set()
         self.parent_child = defaultdict(list)
         self.child_parents = defaultdict(list)
+        self.dBHelper = DBHelper()
+        self.stopwords_file = stopwords_file
 
         os.makedirs(data_dir, exist_ok=True)
-        self.load_index()
+        #TODO:can't compare offset-naive and offset-aware datetimes error occurs in func needs_fetch
+        # self.load_index()
 
     def load_index(self):
-        if os.path.exists(self.index_file):
-            with open(self.index_file, 'r') as f:
-                self.index = json.load(f)
-            if self.index:
-                self.page_id = max(int(v['id']) for v in self.index.values()) + 1
+        self.index = self.dBHelper.get_all_documents()
+        self.page_id = max(len(self.index), 0) + 1
 
     def save_index(self):
         with open(self.index_file, 'w') as f:
@@ -60,30 +66,28 @@ class WebSpider:
             return True
 
         try:
-            response = requests.head(url, timeout=5,verify=False)
+            response = requests.head(url, timeout=5, verify=False)
             response.raise_for_status()
             if 'Last-Modified' not in response.headers:
                 return False
             current_lm = parsedate_to_datetime(response.headers['Last-Modified'])
-            indexed_lm = datetime.datetime.fromisoformat(self.index[url]['last_modified'])
+            indexed_lm = datetime.datetime.fromisoformat(self.index[url]['last_modify'])
 
             return current_lm > indexed_lm
 
-        except (requests.exceptions.RequestException, ValueError) as e:
-
+        # except (requests.exceptions.RequestException, ValueError) as e:
+        except Exception as e:
             print(f"Check failed for {url}: {str(e)}")
             return False
 
-
     def fetch_page(self, url):
         try:
-            response = requests.get(url, timeout=5,verify=False)
+            response = requests.get(url, timeout=5, verify=False)
             response.raise_for_status()
             return response.text, response.headers.get('Last-Modified')
         except Exception as e:
             print(f"Failed to fetch {url}: {str(e)}")
             return None, None
-
 
     def extract_links(self, html, base_url):
         """
@@ -103,26 +107,54 @@ class WebSpider:
                 links.append(absolute_url)
         return links
 
-
-    def save_page(self, page_id, content):
+    def process_page(self, content):
         """
         Save the content of the page to a file
         :param page_id:
         :param content:
         :return:
         """
-        with open(os.path.join(self.data_dir, f'{page_id}.html'), 'w', encoding='utf-8') as f:
-            f.write(content)
+        soup = BeautifulSoup(content, "html.parser")
+        clean_text = soup.get_text(separator=" ", strip=True)  # 保留文本空格分隔
+        title_tag = soup.find('title')
+        title = title_tag.text.strip() if title_tag else 'Untitled'
+        try:
+            with open(self.stopwords_file, "r", encoding="utf-8") as f:
+                stopwords = set(line.strip().lower() for line in f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"The file {self.stopwords_file} does not exist.")
 
+        words = re.findall(r'\b\w+\b', clean_text)  # 分割单词（忽略标点）
+        filtered_words = [
+            word for word in words
+            if word.lower() not in stopwords
+        ]
+        processed_text = " ".join(filtered_words)
+        return processed_text, title
 
-    def save_relations(self):
-        with open('relations.txt', 'w') as f:
-            for parent, children in self.parent_child.items():
-                f.write(f"{parent} {' '.join(map(str, children))}\n")
-        with open('urls.txt', 'w') as f:
-            for url, info in self.index.items():
-                f.write(f"{info['id']} {url}\n")
+    def tfmax(self, text):
+        text_lower = text.lower()
+        words = re.findall(r"[\w'-]+", text_lower)
+        word_counts = Counter(words)
+        if not word_counts:
+            return 0
+        return max(word_counts.values())
 
+    def save2DB(self):
+        for parent, children in self.parent_child.items():
+            for child in children:
+                print(f"Adding parent {parent} and child {child}")
+                self.dBHelper.add_url_linkage(parent, child)
+        for url, val in self.index.items():
+            doc = {}
+            doc['url'] = url
+            doc.update(val)
+
+            doc['content_hash'] = val['content_hash']
+            doc['title'] = val['title']
+            doc['description'] = val['description']
+            doc['tf_max'] = val['tf_max']
+            self.dBHelper.add_document(doc)
 
     def crawl(self):
         self.queue.append(self.start_url)
@@ -134,28 +166,37 @@ class WebSpider:
                 continue
             self.visited.add(current_url)
 
+            #last_modified has changed, need to fetch the page again
             if not self.needs_fetch(current_url):
                 continue
 
             html, last_modified = self.fetch_page(current_url)
             if not html:
                 continue
-
+            html2txt, title = self.process_page(html)
+            tfmax = self.tfmax(html2txt)
             # Update or create index entry
             if current_url in self.index:
+                #TODO: update all content
                 page_id = self.index[current_url]['id']
                 if last_modified:
-                    self.index[current_url]['last_modified'] = parsedate_to_datetime(last_modified).isoformat()
+                    self.index[current_url]['last_modify'] = parsedate_to_datetime(last_modified).isoformat()
+
             else:
                 page_id = self.page_id
                 self.index[current_url] = {
                     'id': page_id,
-                    'last_modified': parsedate_to_datetime(last_modified).isoformat() if last_modified
-                    else datetime.datetime.now().isoformat()
+                    #TODO: there is no last_modified item in database schema
+                    'last_modify': parsedate_to_datetime(last_modified).isoformat() if last_modified
+                    else datetime.datetime.now().isoformat(),
+                    'content_hash': hashlib.sha256(html2txt.encode('utf-8')).hexdigest(),
+                    'content': html2txt,
+                    #TODO:add description
+                    'description': 'TODO',
+                    'title': title,
+                    'tf_max': tfmax
                 }
                 self.page_id += 1
-
-            self.save_page(page_id, html)
 
             # Extract and process links
             links = self.extract_links(html, current_url)
@@ -174,8 +215,7 @@ class WebSpider:
 
             count += 1
 
-        self.save_index()
-        self.save_relations()
+        self.save2DB()
 
 
 if __name__ == "__main__":

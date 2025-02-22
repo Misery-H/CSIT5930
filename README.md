@@ -27,12 +27,16 @@
 - [ ] Page-division when results > 20
 - [ ] `Pages` page which should contain all pages crawled
 - [ ] Search history
-- [ ] Link Django to MySQL to manage crawled data and page rankings
+- [x] Link Django to MySQL to manage crawled data and page rankings
 - [ ] Prompt engineering of AI conclusion
 - [ ] Output a log file for AI calls
 
 
 ## Updates
+### **20250222**
+Link spider to the database;
+The spider can only insert website data into the database and cannot update the data currently;
+
 
 ### **20250215**
 

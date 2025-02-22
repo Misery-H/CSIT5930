@@ -197,3 +197,34 @@ class DBHelper:
                    VALUES (%s, %s)
                 """
                 cursor.execute(sql, (from_doc_id, to_doc_id))
+    def get_all_documents(self):
+        """
+        get_all_documents: retrieve all documents from the database.
+        Returns: a list containing documents data (dictionaries).
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT 
+                        d.url,
+                        d.title,
+                        d.description,
+                        d.content,
+                        d.crawl_time,
+                        d.tf_max
+                    FROM searchapp_document d
+                    """
+                )
+
+                documents = {}
+                for row in cursor.fetchall():
+                    documents[row[0]]={
+                        'title': row[1],
+                        'description': row[2],
+                        'content': row[3],
+                        'crawl_time': row[4].isoformat() if row[5] else None,
+                        'tf_max': row[5],
+                    }
+
+                return documents
