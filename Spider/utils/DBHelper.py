@@ -83,7 +83,7 @@ class DBHelper:
                     doc_id = cursor.lastrowid
 
         return doc_id
-    def update_document(self, document):
+    def update_document(self, document,page_id):
         """
         update_document: Update a document in the database. The records are deduplicated based on content_hash.
         Args:
@@ -101,7 +101,7 @@ class DBHelper:
                 sql = """
                     UPDATE searchapp_document
                     SET url = %s, content_hash = %s, title = %s, description = %s, content = %s, crawl_time = NOW(), tf_max = %s,last_modify = %s
-                    WHERE content_hash = %s
+                    WHERE id = %s
                 """
 
                 cursor.execute(sql, (
@@ -113,6 +113,7 @@ class DBHelper:
                     document.get("tf_max"),
                     document.get("last_modify"),
                     document.get("content_hash"),
+                    page_id
                 ))
 
                 if cursor.lastrowid == 0:
@@ -283,3 +284,23 @@ class DBHelper:
                     }
 
                 return documents
+
+    def get_page_id(self, current_url):
+        """
+        get_page_id: retrieve the document id by url.
+        Args:
+            current_url: a string url
+
+        Returns: document id
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id FROM searchapp_document WHERE url = %s",
+                    (current_url,)
+                )
+                result = cursor.fetchone()
+                if result:
+                    return result[0]
+                else:
+                    return -1

@@ -1,4 +1,6 @@
 import hashlib
+import logging
+
 import requests
 import os
 import json
@@ -46,7 +48,8 @@ class WebSpider:
         self.child_parents = defaultdict(list)
         self.dBHelper = DBHelper()
         self.stopwords_file = stopwords_file
-
+        self.linkageParent= {}
+        self.linkageChild= {}
         os.makedirs(data_dir, exist_ok=True)
 
         self.load_index()
@@ -54,10 +57,6 @@ class WebSpider:
     def load_index(self):
         self.index = self.dBHelper.get_all_documents()
         self.page_id = max(len(self.index), 0) + 1
-
-    def save_index(self):
-        with open(self.index_file, 'w') as f:
-            json.dump(self.index, f, indent=2)
 
     def is_same_domain(self, url):
         return urlparse(url).netloc == self.domain
@@ -141,26 +140,10 @@ class WebSpider:
         if not word_counts:
             return 0
         return max(word_counts.values())
-
-    def save2DB(self):
-        for parent, children in self.parent_child.items():
-            for child in children:
-                print(f"Adding parent {parent} and child {child}")
-                self.dBHelper.add_url_linkage(parent, child)
-        for url, val in self.index.items():
-            doc = {}
-            doc['url'] = url
-            doc.update(val)
-
-            doc['content_hash'] = val['content_hash']
-            doc['title'] = val['title']
-            doc['description'] = val['description']
-            doc['tf_max'] = val['tf_max']
-            self.dBHelper.add_document(doc)
-
     def crawl(self):
         self.queue.append(self.start_url)
         count = 0
+        self.needsProcess = True
         #FIFO
         while self.queue and self.page_id < self.max_pages:
             current_url = self.queue.pop(0)
@@ -169,32 +152,16 @@ class WebSpider:
             self.visited.add(current_url)
 
             #last_modified has changed, need to fetch the page again
-            if not self.needs_fetch(current_url):
-                self.visited.add(current_url)
-                continue
+            self.needsProcess=self.needs_fetch(current_url)
+
 
             html, last_modified = self.fetch_page(current_url)
             if not html:
                 continue
             html2txt, title = self.process_page(html)
             tfmax = self.tfmax(html2txt)
-            # Update or create index entry
-            if current_url in self.index:
-                page_id = self.index[current_url]['id']
-                if last_modified:
-                    self.update_index[current_url] = {
-                        'id': page_id,
-                        'content_hash': hashlib.sha256(html2txt.encode('utf-8')).hexdigest(),
-                        'content': html2txt,
-                        'title': title,
-                        'tf_max': tfmax,
-                        'last_modify': parsedate_to_datetime(last_modified).isoformat()
-                    }
-
-            else:
-                page_id = self.page_id
-                self.index[current_url] = {
-                    'id': page_id,
+            #Insert into
+            doc = {'url': current_url,
                     'last_modify': parsedate_to_datetime(last_modified).isoformat() if last_modified
                     else datetime.datetime.now().isoformat(),
                     'content_hash': hashlib.sha256(html2txt.encode('utf-8')).hexdigest(),
@@ -202,10 +169,23 @@ class WebSpider:
                     #TODO:add description
                     'description': 'TODO',
                     'title': title,
-                    'tf_max': tfmax
-                }
-                self.page_id += 1
-
+                    'tf_max': tfmax}
+            if self.needsProcess:
+                try:
+                    page_id = self.dBHelper.get_page_id(current_url)
+                    logging.info(f"Updating document: {current_url}")
+                    self.dBHelper.update_document(doc,page_id)
+                    #delete the old url linkage
+                    self.dBHelper.delete_url_linkage(page_id)
+                    self.linkageParent[page_id]=True
+                except:
+                    logging.info(f"Adding document: {current_url}")
+                    self.dBHelper.add_document(doc)
+                    page_id = self.dBHelper.get_page_id(current_url)
+                    self.linkageParent[page_id]=True
+                    self.linkageChild[page_id]=True
+            else:
+                page_id = self.dBHelper.get_page_id(current_url)
             # Extract and process links
             links = self.extract_links(html, current_url)
             for link in links:
@@ -215,29 +195,16 @@ class WebSpider:
                 #if childlink is not recorded adding it to the queue
                 if link not in self.visited and link not in self.queue:
                     self.queue.append(link)
-
             # Update parent-child relationships
             for parent_id in self.child_parents.get(current_url, []):
                 if page_id not in self.parent_child[parent_id]:
                     self.parent_child[parent_id].append(page_id)
 
-
-
-        self.save2DB()
-        self.update2DB()
-
-    def update2DB(self):
-        """
-        if a website has been updated,
-        1. we should update its content in the table Document
-        2. its child-page may be changed, we should delete all outdated information in the table UrlLinkage
-        :return:
-        """
-        if self.update_index:
-            for url, val in self.update_index.items():
-                self.dBHelper.update_document(val)
-                self.dBHelper.delete_url_linkage(val['id'])
-
+        for parent, children in self.parent_child.items():
+            for child in children:
+                if self.linkageParent.get(parent,False) or self.linkageChild.get(child,False):
+                    logging.info(f"Adding URL linkage: {parent} -> {child}")
+                    self.dBHelper.add_url_linkage(parent, child)
 
 if __name__ == "__main__":
     spider = WebSpider(
