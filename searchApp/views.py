@@ -68,7 +68,7 @@ def search_results(request):
 def ai_analysis(request):
     query = request.GET.get('q', '')
 
-    return StreamingHttpResponse(aliyun_helper.chat_complete(query))
+    return StreamingHttpResponse(aliyun_helper.chat_complete_stream(query))
 
 
 def pages(request, page_number=1):
@@ -127,12 +127,19 @@ def pages(request, page_number=1):
         # TODO: fetch keywords
         keywords = ["keywords1", "keywords2", "keywords3", "keywords4", "keywords5"]
 
+        description_ai = False;
+        description = doc.description
+        if description.split("`")[-1] == "AIDESC":
+            description_ai = True
+            description = "`".join(description.split("`")[:-1])
+
         pages.append({
             'id': doc.id,
             'title': doc.title,
             'display_url': process_url(doc.url),
             'url': doc.url,
-            'snippet': doc.description,
+            'snippet': description,
+            'desc_ai': description_ai,
             'last_modify': doc.last_modify,
             'size': "121KB",  # TODO
             'keywords': keywords,

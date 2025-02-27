@@ -46,76 +46,91 @@
 <div class="result-body">
     <div class="container-fluid mt-4">
         <div class="row">
-            <div class="results-container">
-                <p class="results-count">
-                    <b class="font-blue">deepsearch</b>
-                    includes {{ doc_count }} documents in {{ pages_count }} pages, showing page {{ page_number }}
-                </p>
+		    <div class="col-md-9">
+                <div class="results-container">
+                    <p class="results-count">
+                        <b class="font-blue">deepsearch</b>
+                        includes {{ doc_count }} documents in {{ pages_count }} pages, showing page {{ page_number }}
+                    </p>
 
-                {% for page in pages %}
-                    <div class="result-item">
-                        <h1 class="result-url">
-                            <a href="{{ page.url }}">{{ page.display_url }}</a>
-                        </h1>
+                    {% for page in pages %}
+                        <div class="result-item">
+                            <h1 class="result-url">
+                                <a href="{{ page.url }}">{{ page.display_url }}</a>
+                            </h1>
 
-                        <div class="result-title-container">
-                            <h3 class="result-title">
-                                <a href="{{ page.url }}">{{ page.title }}</a>
-                            </h3>
-                            <h6 class="result-score">
-                                {{ page.score }}
-                            </h6>
+                            <div class="result-title-container">
+                                <h3 class="result-title">
+                                    <a href="{{ page.url }}">{{ page.title }}</a>
+                                </h3>
+                                <h6 class="result-score">
+                                    {{ page.score }}
+                                </h6>
+                            </div>
+                            <div class="result-snippet">
+                                {{ page.snippet }}
+                                {% if page.desc_ai %}
+                                    <span class="tag_ai_generated">
+                                        AI Generated†
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            {# Show page data: last modify time, size, keywords #}
+                            <p class="result-data"><b>Last modified at:</b> {{ page.last_modify }} <b>Size of this
+                                page:</b> {{ page.size }}</p>
+                            <p class="result-data"><b>Keywords: </b>
+                                {% for keyword in page.keywords %}
+                                    {{ keyword }}
+                                {% endfor %}
+                            </p>
+                            {# Show parents and children pages#}
+                            {% if page.from_docs|length > 0 %}
+                                <p class="result-data"><b>Parents: </b>
+                                    {% for from_doc in page.from_docs %}
+                                        <a href="{{ from_doc.url }}" class="result-data-related">{{ from_doc.title }}</a>
+                                    {% endfor %}
+                                </p>
+                            {% endif %}
+
+                            {% if page.to_docs %}
+                                <p class="result-data">
+                                    <b>Children: </b>
+                                    {% for to_doc in page.to_docs|slice:":10" %}
+                                        <a href="{{ to_doc.url }}" class="result-data-related">{{ to_doc.title }}</a>
+                                    {% endfor %}
+
+                                    {% with total=page.to_docs|length %}
+                                        {% if total > 10 %}
+                                            <span class="extra-links" style="display:none;">
+                                                {% for to_doc in page.to_docs|slice:"10:" %}
+                                                    <a href="{{ to_doc.url }}"
+                                                       class="result-data-related">{{ to_doc.title }}</a>
+                                                {% endfor %}
+                                            </span>
+                                            <button class="toggle-links"
+                                                    data-state="collapsed"
+                                                    data-full-text="collapse（{{ total }} items）"
+                                                    data-collapsed-text="Expand（+{{ total|add:-10 }} children items）"
+                                                    onclick="toggleExtraLinks(this)">
+                                                Expand（+{{ total|add:-10 }} items）
+                                            </button>
+                                        {% endif %}
+                                    {% endwith %}
+                                </p>
+                            {% endif %}
+
                         </div>
-                        <p class="result-snippet">{{ page.snippet }}</p>
-
-                        {# Show page data: last modify time, size, keywords #}
-                        <p class="result-data"><b>Last modified at:</b> {{ page.last_modify }} <b>Size of this
-                            page:</b> {{ page.size }}</p>
-                        <p class="result-data"><b>Keywords: </b>
-                            {% for keyword in page.keywords %}
-                                {{ keyword }}
-                            {% endfor %}
-                        </p>
-                        {# Show parents and children pages#}
-                        {% if page.from_docs|length > 0 %}
-                            <p class="result-data"><b>Parents: </b>
-                                {% for from_doc in page.from_docs %}
-                                    <a href="{{ from_doc.url }}" class="result-data-related">{{ from_doc.title }}</a>
-                                {% endfor %}
-                            </p>
-                        {% endif %}
-
-                        {% if page.to_docs %}
-                            <p class="result-data">
-                                <b>Children: </b>
-                                {% for to_doc in page.to_docs|slice:":10" %}
-                                    <a href="{{ to_doc.url }}" class="result-data-related">{{ to_doc.title }}</a>
-                                {% endfor %}
-
-                                {% with total=page.to_docs|length %}
-                                    {% if total > 10 %}
-                                        <span class="extra-links" style="display:none;">
-                                            {% for to_doc in page.to_docs|slice:"10:" %}
-                                                <a href="{{ to_doc.url }}"
-                                                   class="result-data-related">{{ to_doc.title }}</a>
-                                            {% endfor %}
-                                        </span>
-                                        <button class="toggle-links"
-                                                data-state="collapsed"
-                                                data-full-text="collapse（{{ total }} items）"
-                                                data-collapsed-text="Expand（+{{ total|add:-10 }} children items）"
-                                                onclick="toggleExtraLinks(this)">
-                                            Expand（+{{ total|add:-10 }} items）
-                                        </button>
-                                    {% endif %}
-                                {% endwith %}
-                            </p>
-                        {% endif %}
-
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             </div>
 
+
+            <div class="col-md-3">
+                <h1 class="side-column-title">
+                    Keywords included
+                </h1>
+            </div>
         </div>
     </div>
 </div>
@@ -195,6 +210,7 @@
                         <a href="/pages" class="nav-link">|- Pages</a>
                         <a href="/keywords" class="nav-link">|- Keywords</a>
                         <a href="/history" class="nav-link">|- History</a>
+                        <a href="/admin" class="nav-link">|- Admin</a>
                         <a href="https://github.com/Misery-H/CSIT5930/blob/main/README.md" class="nav-link">|- About</a>
                     </div>
                 </div>

@@ -207,6 +207,7 @@ body {
 
 .result-title a {
     color: #1a0dab;
+    font-family: "Outfit", serif;
     text-decoration: underline;
 }
 
@@ -225,6 +226,15 @@ body {
     line-height: 1.58;
     margin: 4px 0 0 0;
     font-size: 14px;
+}
+
+.tag_ai_generated {
+    background: rgba(66, 133, 244, 0.21);
+    padding: 0 6px;
+    border: none;
+    border-radius: 5px;
+    color: #4d6cfb;
+    font-family: "Outfit", serif;
 }
 
 .result-data {
@@ -477,4 +487,10 @@ body {
 .page-count {
     color: #6c757d;
     font-size: 0.9rem;
+}
+
+
+.side-column-title {
+    font-family: "Outfit", serif;
+    font-size: 22px;
 }

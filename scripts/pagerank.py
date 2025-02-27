@@ -14,7 +14,6 @@ db_config = {
 
 def calculate_pagerank():
     """Calculate PageRank using raw SQL and numpy with convergence threshold"""
-    # Database configuration - replace with your actual credentials
 
     try:
         # Establish database connection
