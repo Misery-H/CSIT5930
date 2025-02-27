@@ -31,7 +31,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'searchApp.apps.LowercaseTableNameAppConfig',
+    'searchApp.apps.SearchappConfig',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
