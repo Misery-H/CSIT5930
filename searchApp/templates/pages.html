@@ -48,7 +48,7 @@
             <div class="results-container">
                 <p class="results-count">
                     <b class="font-blue">deepsearch</b>
-                    includes {{ pages_count }} pages, showing page {{ page_number }}
+                    includes {{ doc_count }} documents in {{ pages_count }} pages, showing page {{ page_number }}
                 </p>
 
                 {% for page in pages %}
@@ -62,7 +62,7 @@
                                 <a href="{{ page.url }}">{{ page.title }}</a>
                             </h3>
                             <h6 class="result-score">
-                                Score: {{ page.score }}
+                                {{ page.score }}
                             </h6>
                         </div>
                         <p class="result-snippet">{{ page.snippet }}</p>

@@ -74,7 +74,8 @@ def ai_analysis(request):
 def pages(request, page_number=1):
     # LWT: this slide should be processed in SQL layer, instead of loading all records into memory.
     # Please monitor for performance degradation
-    paginator = Paginator(Document.objects.all(), 50)
+    doc_count = Document.objects.all().count()
+    paginator = Paginator(Document.objects.all().order_by("-pr_score"), 50, )
     pages_count = paginator.num_pages
     page_obj = paginator.get_page(page_number)
 
@@ -137,10 +138,11 @@ def pages(request, page_number=1):
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
-            'score': "114514"  # TODO
+            'score': f"Pagerank: {round(doc.pr_score, 4)}"
         })
 
     context = {
+        'doc_count': doc_count,
         'pages_count': pages_count,
         'page_number': page_number,
         'page_range': page_range,
