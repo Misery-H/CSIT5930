@@ -11,10 +11,15 @@
 
 
 ## Storage Part
+### Done
+- [x] Initial MySQL backend for Django
+- [x] Design models for data persistence
 ### TO-DO
-- [ ] Initial MySQL backend for Django
-- [ ] Design models for data persistence
+- [ ] inverted index table (high priority)
+- [ ] term table (high priority)
 - [ ] Use Redis to cache search results
+- [ ] Page rank data model
+- [ ] Description generation
 
 
 ## Website (Django and Front-end) Part
@@ -22,12 +27,11 @@
 - [x] Main search page
 - [x] Search result page
 - [x] AI suggestion
+- [x] Link Django to MySQL to manage crawled data
 
 ### TO-DO
-- [ ] Page-division when results > 20
 - [ ] `Pages` page which should contain all pages crawled
 - [ ] Search history
-- [x] Link Django to MySQL to manage crawled data and page rankings
 - [ ] Prompt engineering of AI conclusion
 - [ ] Output a log file for AI calls
 
