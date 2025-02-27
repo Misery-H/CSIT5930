@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pages - deepsearch</title>
+    {% load static %}
+    <link rel="icon" href="{% static 'images/fav.png' %}" type="image/x-icon">
+    <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!--    Bootstrap CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!--    Google fonts CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit&display=swap" rel="stylesheet">
+
+</head>
+<body>
+<!-- Header with Logo and Search -->
+<div class="results-header">
+    <div class="header-content">
+        <a href="/search" class="result-logo">
+            <img src="{% static 'images/logo.png' %}" alt="Site Logo">
+        </a>
+        <div class="search-container results-search">
+            <form action="{% url 'search_results' %}" method="GET">
+                    <textarea
+                            id="search-input"
+                            name="q"
+                            rows="1"
+                            wrap="soft"
+                            placeholder="Search..."
+                    >{{ query }}</textarea>
+                <button id="search-button" type="submit">
+                    <img src="{% static 'images/search-icon.svg' %}" alt="Search" class="search-icon">
+                </button>
+                <div id="suggestions-container"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="result-body">
+    <div class="container-fluid mt-4">
+        <div class="row">
+		    <div class="col-md-9">
+                <div class="results-container">
+                    <p class="results-count">
+                        <b class="font-blue">deepsearch</b>
+                        includes {{ doc_count }} documents in {{ pages_count }} pages, showing page {{ page_number }}
+                    </p>
+
+                    {% for page in pages %}
+                        <div class="result-item">
+                            <h1 class="result-url">
+                                <a href="{{ page.url }}">{{ page.display_url }}</a>
+                            </h1>
+
+                            <div class="result-title-container">
+                                <h3 class="result-title">
+                                    <a href="{{ page.url }}">{{ page.title }}</a>
+                                </h3>
+                                <h6 class="result-score">
+                                    {{ page.score }}
+                                </h6>
+                            </div>
+                            <div class="result-snippet">
+                                {{ page.snippet }}
+                                {% if page.desc_ai %}
+                                    <span class="tag_ai_generated">
+                                        AI Generated†
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            {# Show page data: last modify time, size, keywords #}
+                            <p class="result-data"><b>Last modified at:</b> {{ page.last_modify }} <b>Size of this
+                                page:</b> {{ page.size }}</p>
+                            <p class="result-data"><b>Keywords: </b>
+                                {% for keyword in page.keywords %}
+                                    {{ keyword }}
+                                {% endfor %}
+                            </p>
+                            {# Show parents and children pages#}
+                            {% if page.from_docs|length > 0 %}
+                                <p class="result-data"><b>Parents: </b>
+                                    {% for from_doc in page.from_docs %}
+                                        <a href="{{ from_doc.url }}" class="result-data-related">{{ from_doc.title }}</a>
+                                    {% endfor %}
+                                </p>
+                            {% endif %}
+
+                            {% if page.to_docs %}
+                                <p class="result-data">
+                                    <b>Children: </b>
+                                    {% for to_doc in page.to_docs|slice:":10" %}
+                                        <a href="{{ to_doc.url }}" class="result-data-related">{{ to_doc.title }}</a>
+                                    {% endfor %}
+
+                                    {% with total=page.to_docs|length %}
+                                        {% if total > 10 %}
+                                            <span class="extra-links" style="display:none;">
+                                                {% for to_doc in page.to_docs|slice:"10:" %}
+                                                    <a href="{{ to_doc.url }}"
+                                                       class="result-data-related">{{ to_doc.title }}</a>
+                                                {% endfor %}
+                                            </span>
+                                            <button class="toggle-links"
+                                                    data-state="collapsed"
+                                                    data-full-text="collapse（{{ total }} items）"
+                                                    data-collapsed-text="Expand（+{{ total|add:-10 }} children items）"
+                                                    onclick="toggleExtraLinks(this)">
+                                                Expand（+{{ total|add:-10 }} items）
+                                            </button>
+                                        {% endif %}
+                                    {% endwith %}
+                                </p>
+                            {% endif %}
+
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+
+            <div class="col-md-3">
+                <h1 class="side-column-title">
+                    Keywords included
+                </h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Paginator #}
+{% if pages_count > 1 %}
+    <nav class="pagination-container">
+        <ul class="pagination">
+            {% if page_number > 1 %}
+                <li class="page-item">
+                    <a class="page-link" href="/pages/{{ page_number|add:-1 }}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&laquo;</span>
+                </li>
+            {% endif %}
+
+            {% for num in page_range %}
+                {% if num == page_number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num == '...' %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="/pages/{{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_number < pages_count %}
+                <li class="page-item">
+                    <a class="page-link" href="/pages/{{ page_number|add:1 }}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">&raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+
+        <div class="page-count">
+            Page {{ page_number }} in {{ pages_count }} pages
+        </div>
+    </nav>
+{% endif %}
+
+
+<div class="results-footer">
+    <div class="result-body">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="/search" class="result-logo">
+                        <img src="{% static 'images/logo.png' %}" alt="Site Logo">
+                    </a>
+                    <p class="results-footer-note">
+                        This is the course project for HKUST CSIT 5930 Search Engline Applications.
+                    </p>
+
+                    <p class="results-footer-note">
+                        We open source with the MIT License.
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="results-footer-item">
+                        <b>Portals</b>
+                        <a href="/search" class="nav-link">|- Back to main page</a>
+                        <a href="/pages" class="nav-link">|- Pages</a>
+                        <a href="/keywords" class="nav-link">|- Keywords</a>
+                        <a href="/history" class="nav-link">|- History</a>
+                        <a href="/admin" class="nav-link">|- Admin</a>
+                        <a href="https://github.com/Misery-H/CSIT5930/blob/main/README.md" class="nav-link">|- About</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <p>
+                        <i class="fa fa-github" style="font-size:14px"></i> View our project on Github: <a href="https://github.com/Misery-H/CSIT5930/" id="footer-github-link">CSIT5930</a>
+                    </p>
+                    <p>
+                        <b>deep</b>search stands for:<br>
+                        Generate content with <b>deep</b>seek LLM.<br>
+                        Semantic analysis using embedding via <b>deep</b> neural networks.
+                    </p>
+
+                </div>
+            </div>
+
+            <div class="row">
+                <footer class="copyright-footer">
+                    <p>&copy; 2025 CSIT5930. All rights reserved.</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        const originalQuery = "{{ query|escapejs }}".trim().toLowerCase();
+        let searchTimeout;
+
+        const query = new URLSearchParams(window.location.search).get('q');
+        if (query) {
+            loadAIConclusion(query);
+        }
+
+        function autoResize() {
+            const textarea = $('#search-input');
+            textarea.css('height', 'auto').css('height', textarea.prop('scrollHeight') + 'px');
+        }
+
+        function isSameQuery(currentQuery) {
+            return currentQuery.trim().toLowerCase() === originalQuery;
+        }
+
+        function handleSuggestions(query) {
+            clearTimeout(searchTimeout);
+
+            if (isSameQuery(query)) {
+                $('#suggestions-container').hide();
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                if (query.length > 0) {
+                    $.ajax({
+                        url: "{% url 'search_suggestions' %}",
+                        data: {'q': query},
+                        success: function (data) {
+                            const container = $('#suggestions-container');
+                            container.empty();
+
+                            if (data.suggestions.length > 0 && !isSameQuery(query)) {
+                                data.suggestions.forEach(s => {
+                                    container.append(`<div class="suggestion-item">${s}</div>`);
+                                });
+                                container.show();
+                            } else {
+                                container.hide();
+                            }
+                        },
+                        error: function (xhr) {
+                            console.error('Error:', xhr.statusText);
+                        }
+                    });
+                } else {
+                    $('#suggestions-container').hide();
+                }
+            }, 300);
+        }
+
+        // Event handlers
+        $('#search-input')
+            .on('input', function () {
+                autoResize();
+                handleSuggestions($(this).val());
+            })
+            .on('focus', function () {
+                const query = $(this).val().trim();
+                if (query.length > 0 && !isSameQuery(query)) {
+                    $('#suggestions-container').show();
+                }
+            })
+            .on('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#suggestions-container').hide();
+                    $(this).closest('form').submit();
+                }
+            });
+
+        $(document).on('click', function (e) {
+            if (!$(e.target).closest('.search-container').length) {
+                $('#suggestions-container').hide();
+            }
+        });
+
+        $('#suggestions-container').on('click', '.suggestion-item', function () {
+            const suggestion = $(this).text().trim();
+            $('#search-input').val(suggestion).trigger('input');
+            $('form').submit();
+        });
+
+        autoResize();
+        $('#search-input').focus();
+    });
+
+    function loadAIConclusion(query) {
+        const aiContent = document.getElementById('ai-content');
+        aiContent.innerHTML = ''; // Clear previous content
+
+        fetch(`{% url 'ai_analysis' %}?q=${encodeURIComponent(query)}`)
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                function processStream({done, value}) {
+                    if (done) return;
+
+                    // Append new content
+                    aiContent.innerHTML += decoder.decode(value);
+
+                    // Continue reading
+                    return reader.read().then(processStream);
+                }
+
+                return reader.read().then(processStream);
+            })
+            .catch(error => {
+                console.error('Error loading AI analysis:', error);
+                aiContent.innerHTML = '<p class="text-danger">Failed to load AI analysis</p>';
+            });
+    }
+
+    function toggleExtraLinks(button) {
+        const extraLinks = button.previousElementSibling;
+        const isCollapsed = button.dataset.state === 'collapsed';
+
+        if (isCollapsed) {
+            extraLinks.style.display = 'inline';
+            button.textContent = button.dataset.fullText;
+            button.dataset.state = 'expanded';
+        } else {
+            extraLinks.style.display = 'none';
+            button.textContent = button.dataset.collapsedText;
+            button.dataset.state = 'collapsed';
+        }
+    }
+
+</script>
+
+</body>
+</html>

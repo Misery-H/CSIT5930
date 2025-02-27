@@ -10,6 +10,9 @@ class Document(models.Model):
     crawl_time = models.DateTimeField(auto_now_add=True)
     tf_max = models.IntegerField(default=1)
     last_modify = models.DateTimeField(auto_now_add=True)
+    page_size = models.IntegerField(default=0)
+    pr_score = models.FloatField(default=0.00)
+    hits_score = models.FloatField(default=0.00)
 
     class Meta:
         indexes = [
