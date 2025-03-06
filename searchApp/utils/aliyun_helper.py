@@ -7,7 +7,7 @@ client = OpenAI(
 )
 
 
-def chat_complete(content):
+def chat_complete_stream(content):
     prompt = "Please conclude the following content in 100 words:{}".format(content)
     print(f"Start asking ai using Aliyun: {prompt}")
     answer_content = ""
@@ -33,3 +33,15 @@ def chat_complete(content):
 
     print("=" * 20 + "Full response" + "=" * 20)
     print(answer_content)
+
+def chat_complete(content):
+    print(f"Start asking ai using Aliyun: {content}")
+
+    completion = client.chat.completions.create(
+        model="deepseek-v3",
+        messages=[
+            {'role': 'user', 'content': content}
+        ]
+    )
+
+    print(completion.choices[0].message.content)

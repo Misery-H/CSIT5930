@@ -38,43 +38,47 @@
 </div>
 
 <!-- Results Container -->
-<div class="container-fluid mt-4">
-    <div class="row">
-        <!-- Left Results Section (3/5) -->
-        <div class="col-md-7">
-            <div class="results-container">
-                <p class="results-count">About {{ results|length }} results (in {{ time_consumption }} seconds)</p>
 
-                {% for result in results %}
-                    <div class="result-item mb-4">
-                        <a href="{{ result.url }}" class="result-url">{{ result.display_url }}</a>
-                        <h3 class="result-title">
-                            <a href="{{ result.url }}">{{ result.title }}</a>
-                        </h3>
-                        <p class="result-snippet">{{ result.snippet }}</p>
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
+<div class="result-body">
 
-        <div class="col-md-5">
-            <div class="ai-conclusion-container p-4">
-                <h5>AI Conclusion†</h5>
-                <div class="azure-attribution">
-                    <small class="text-muted">
-                        Powered by
-                        <a href="https://bailian.console.aliyun.com/" target="_blank" class="text-decoration-none">
-                            Alibaba Cloud
-                        </a>
-                        and
-                        <a href="https://www.deepseek.com/" target="_blank" class="text-decoration-none">
-                            DeepSeek AI
-                        </a>
-                    </small>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Left Results Section (3/5) -->
+            <div class="col-md-7">
+                <div class="results-container">
+                    <p class="results-count">About {{ results|length }} results (in {{ time_consumption }} seconds)</p>
+
+                    {% for result in results %}
+                        <div class="result-item mb-4">
+                            <a href="{{ result.url }}" class="result-url">{{ result.display_url }}</a>
+                            <h3 class="result-title">
+                                <a href="{{ result.url }}">{{ result.title }}</a>
+                            </h3>
+                            <p class="result-snippet">{{ result.snippet }}</p>
+                        </div>
+                    {% endfor %}
                 </div>
-                <div id="ai-content" class="ai-streaming-content"></div>
             </div>
 
+            <div class="col-md-5">
+                <div class="ai-conclusion-container p-4">
+                    <h5>AI Conclusion†</h5>
+                    <div class="azure-attribution">
+                        <small class="text-muted">
+                            Powered by
+                            <a href="https://bailian.console.aliyun.com/" target="_blank" class="text-decoration-none">
+                                Alibaba Cloud
+                            </a>
+                            and
+                            <a href="https://www.deepseek.com/" target="_blank" class="text-decoration-none">
+                                DeepSeek AI
+                            </a>
+                        </small>
+                    </div>
+                    <div id="ai-content" class="ai-streaming-content"></div>
+                </div>
+
+            </div>
         </div>
     </div>
 </div>
