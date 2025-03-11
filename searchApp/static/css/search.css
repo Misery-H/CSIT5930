@@ -103,6 +103,20 @@ body {
     overflow-y: auto;
 }
 
+#history-container {
+    display: none;
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 1000;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
 .suggestion-item {
     padding: 12px 20px;
     font-size: 15px;
