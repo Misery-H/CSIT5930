@@ -304,3 +304,33 @@ class DBHelper:
                     return result[0]
                 else:
                     return -1
+    def add_term(self,term):
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                    term_id,df = self.get_term(term)
+                    if term_id and df:
+                        cursor.execute(
+                            "UPDATE searchapp_term SET df = df + 1 WHERE id = %s",
+                            (term_id,)
+                        )
+                    else:
+                        cursor.execute(
+                            "INSERT INTO searchapp_term (term,df) VALUES (%s,1)",
+                            (term,)
+                        )
+
+
+
+    def get_term(self,term):
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id,df FROM searchapp_term WHERE term = %s",
+                    (term,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row[0],row[1]
+                else:
+                    return None,None
+

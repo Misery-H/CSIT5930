@@ -11,9 +11,11 @@ from collections import defaultdict, Counter
 import datetime
 from utils.DBHelper import DBHelper
 import re
+from unidecode import unidecode
 #to ignore warning
 import shutup
 shutup.please()
+logging.basicConfig(level=logging.INFO)
 
 
 class WebSpider:
@@ -83,7 +85,7 @@ class WebSpider:
 
     def fetch_page(self, url):
         try:
-            response = requests.get(url, timeout=5, verify=False)
+            response = requests.get(url, timeout=(60,60), verify=False)
             response.raise_for_status()
             return response.text, response.headers.get('Last-Modified')
         except Exception as e:
@@ -186,6 +188,10 @@ class WebSpider:
                     self.linkageChild[page_id]=True
             else:
                 page_id = self.dBHelper.get_page_id(current_url)
+            tmp= unidecode(doc['content']).lower()  # 全局转换只需一次
+            term_set = set(tmp.split())
+            for term in term_set:
+                self.dBHelper.add_term(term)
             # Extract and process links
             links = self.extract_links(html, current_url)
             for link in links:
