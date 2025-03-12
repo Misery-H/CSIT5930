@@ -319,16 +319,29 @@ class DBHelper:
 
 
 
-    def get_term(self,term):
+    def get_all_term(self):
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id,df FROM searchapp_term WHERE term = %s",
-                    (term,)
+                    "SELECT id,term FROM searchapp_term",
+
                 )
-                row = cursor.fetchone()
-                if row:
-                    return row[0],row[1]
-                else:
-                    return None,None
+                row = cursor.fetchall()
+                terms = {}
+                for i in row:
+                    terms[i[1]]=i[0]
+                return terms
+    def add_inverted_index(self,inverted_index,term2id):
+        data = [(tf,document_id, term2id[term])
+                for document_id, term_counter in inverted_index.items()
+                for term, tf in term_counter.items()]
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                # 将字典转换为(term, df)元组列表
+
+                # 使用executemany进行批量插入
+                cursor.executemany(
+                    "INSERT INTO searchapp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
+                    data
+                )
 

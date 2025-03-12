@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from operator import invert
 
 import requests
 import os
@@ -16,7 +17,6 @@ from unidecode import unidecode
 import shutup
 shutup.please()
 logging.basicConfig(level=logging.INFO)
-
 
 class WebSpider:
     """
@@ -53,6 +53,7 @@ class WebSpider:
         self.linkageParent= {}
         self.linkageChild= {}
         self.term_hash={}
+        self.invert_term={}
         os.makedirs(data_dir, exist_ok=True)
 
         self.load_index()
@@ -189,7 +190,10 @@ class WebSpider:
                     self.linkageChild[page_id]=True
             else:
                 page_id = self.dBHelper.get_page_id(current_url)
-            tmp= unidecode(doc['content']).lower()  # 全局转换只需一次
+
+            tmp= unidecode(doc['content']).lower()
+            self.invert_term[page_id] = Counter(tmp.split())
+
             term_set = set(tmp.split())
             for term in term_set:
                 if not self.term_hash.get(term,False):
@@ -216,6 +220,9 @@ class WebSpider:
                     logging.info(f"Adding URL linkage: {parent} -> {child}")
                     self.dBHelper.add_url_linkage(parent, child)
         self.dBHelper.add_term(self.term_hash)
+        term2id = self.dBHelper.get_all_term()
+        self.dBHelper.add_inverted_index(self.invert_term,term2id)
+
 
 
 if __name__ == "__main__":
