@@ -304,20 +304,18 @@ class DBHelper:
                     return result[0]
                 else:
                     return -1
-    def add_term(self,term):
+    def add_term(self,term_dict):
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
-                    term_id,df = self.get_term(term)
-                    if term_id and df:
-                        cursor.execute(
-                            "UPDATE searchapp_term SET df = df + 1 WHERE id = %s",
-                            (term_id,)
-                        )
-                    else:
-                        cursor.execute(
-                            "INSERT INTO searchapp_term (term,df) VALUES (%s,1)",
-                            (term,)
-                        )
+                # 将字典转换为(term, df)元组列表
+                data = [(term, df) for term, df in term_dict.items()]
+                data = list(sorted(data, key=lambda x: x[1], reverse=True))
+
+                # 使用executemany进行批量插入
+                cursor.executemany(
+                    "INSERT INTO searchapp_term (term, df) VALUES (%s, %s)",
+                    data
+                )
 
 
 

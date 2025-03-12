@@ -52,6 +52,7 @@ class WebSpider:
         self.stopwords_file = stopwords_file
         self.linkageParent= {}
         self.linkageChild= {}
+        self.term_hash={}
         os.makedirs(data_dir, exist_ok=True)
 
         self.load_index()
@@ -191,7 +192,10 @@ class WebSpider:
             tmp= unidecode(doc['content']).lower()  # 全局转换只需一次
             term_set = set(tmp.split())
             for term in term_set:
-                self.dBHelper.add_term(term)
+                if not self.term_hash.get(term,False):
+                    self.term_hash[term]=1
+                else:
+                    self.term_hash[term]+=1
             # Extract and process links
             links = self.extract_links(html, current_url)
             for link in links:
@@ -211,6 +215,8 @@ class WebSpider:
                 if self.linkageParent.get(parent,False) or self.linkageChild.get(child,False):
                     logging.info(f"Adding URL linkage: {parent} -> {child}")
                     self.dBHelper.add_url_linkage(parent, child)
+        self.dBHelper.add_term(self.term_hash)
+
 
 if __name__ == "__main__":
     spider = WebSpider(
