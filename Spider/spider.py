@@ -1,5 +1,6 @@
 import hashlib
 import logging
+from operator import invert
 
 import requests
 import os
@@ -11,10 +12,11 @@ from collections import defaultdict, Counter
 import datetime
 from utils.DBHelper import DBHelper
 import re
+from unidecode import unidecode
 #to ignore warning
 import shutup
 shutup.please()
-
+logging.basicConfig(level=logging.INFO)
 
 class WebSpider:
     """
@@ -50,6 +52,8 @@ class WebSpider:
         self.stopwords_file = stopwords_file
         self.linkageParent= {}
         self.linkageChild= {}
+        self.term_hash={}
+        self.invert_term={}
         os.makedirs(data_dir, exist_ok=True)
 
         self.load_index()
@@ -83,7 +87,7 @@ class WebSpider:
 
     def fetch_page(self, url):
         try:
-            response = requests.get(url, timeout=5, verify=False)
+            response = requests.get(url, timeout=(60,60), verify=False)
             response.raise_for_status()
             return response.text, response.headers.get('Last-Modified')
         except Exception as e:
@@ -186,6 +190,16 @@ class WebSpider:
                     self.linkageChild[page_id]=True
             else:
                 page_id = self.dBHelper.get_page_id(current_url)
+
+            tmp= unidecode(doc['content']).lower()
+            self.invert_term[page_id] = Counter(tmp.split())
+
+            term_set = set(tmp.split())
+            for term in term_set:
+                if not self.term_hash.get(term,False):
+                    self.term_hash[term]=1
+                else:
+                    self.term_hash[term]+=1
             # Extract and process links
             links = self.extract_links(html, current_url)
             for link in links:
@@ -205,6 +219,11 @@ class WebSpider:
                 if self.linkageParent.get(parent,False) or self.linkageChild.get(child,False):
                     logging.info(f"Adding URL linkage: {parent} -> {child}")
                     self.dBHelper.add_url_linkage(parent, child)
+        self.dBHelper.add_term(self.term_hash)
+        term2id = self.dBHelper.get_all_term()
+        self.dBHelper.add_inverted_index(self.invert_term,term2id)
+
+
 
 if __name__ == "__main__":
     spider = WebSpider(

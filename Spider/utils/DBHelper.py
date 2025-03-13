@@ -149,24 +149,24 @@ class DBHelper:
             term_id = cursor.fetchone()[0]
             return term_id
 
-    def add_inverted_index(self, doc_id, term_tf_dict):
-        """
-        add_inverted_index: this function automatically maintain the "term" table while appending inverted index.
-        Args:
-            doc_id: document id to be inverted indexed.
-            term_tf_dict: a dictionary with tuple meta elements (term, term-frequency)
-        """
-        with self._get_connection() as conn:
-            with conn.cursor() as cursor:
-                for term, tf in term_tf_dict.items():
-                    term_id = self._get_or_create_term(term, conn)
-
-                    sql = """
-                        INSERT INTO searchapp_invertedindex (term_id, document_id, tf)
-                        VALUES (%s, %s, %s)
-                        ON DUPLICATE KEY UPDATE tf = VALUES(tf)
-                    """
-                    cursor.execute(sql, (term_id, doc_id, tf))
+    # def add_inverted_index(self, doc_id, term_tf_dict):
+    #     """
+    #     add_inverted_index: this function automatically maintain the "term" table while appending inverted index.
+    #     Args:
+    #         doc_id: document id to be inverted indexed.
+    #         term_tf_dict: a dictionary with tuple meta elements (term, term-frequency)
+    #     """
+    #     with self._get_connection() as conn:
+    #         with conn.cursor() as cursor:
+    #             for term, tf in term_tf_dict.items():
+    #                 term_id = self._get_or_create_term(term, conn)
+    #
+    #                 sql = """
+    #                     INSERT INTO searchapp_invertedindex (term_id, document_id, tf)
+    #                     VALUES (%s, %s, %s)
+    #                     ON DUPLICATE KEY UPDATE tf = VALUES(tf)
+    #                 """
+    #                 cursor.execute(sql, (term_id, doc_id, tf))
 
     def get_documents_by_term(self, term):
         """
@@ -304,3 +304,40 @@ class DBHelper:
                     return result[0]
                 else:
                     return -1
+    def add_term(self,term_dict):
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+
+                data = [(term, df) for term, df in term_dict.items()]
+                data = list(sorted(data, key=lambda x: x[1], reverse=True))
+
+                cursor.executemany(
+                    "INSERT INTO searchapp_term (term, df) VALUES (%s, %s)",
+                    data
+                )
+
+
+
+    def get_all_term(self):
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT id,term FROM searchapp_term",
+
+                )
+                row = cursor.fetchall()
+                terms = {}
+                for i in row:
+                    terms[i[1]]=i[0]
+                return terms
+    def add_inverted_index(self,inverted_index,term2id):
+        data = [(tf,document_id, term2id[term])
+                for document_id, term_counter in inverted_index.items()
+                for term, tf in term_counter.items()]
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO searchapp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
+                    data
+                )
+
