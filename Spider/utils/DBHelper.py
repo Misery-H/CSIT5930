@@ -149,24 +149,24 @@ class DBHelper:
             term_id = cursor.fetchone()[0]
             return term_id
 
-    def add_inverted_index(self, doc_id, term_tf_dict):
-        """
-        add_inverted_index: this function automatically maintain the "term" table while appending inverted index.
-        Args:
-            doc_id: document id to be inverted indexed.
-            term_tf_dict: a dictionary with tuple meta elements (term, term-frequency)
-        """
-        with self._get_connection() as conn:
-            with conn.cursor() as cursor:
-                for term, tf in term_tf_dict.items():
-                    term_id = self._get_or_create_term(term, conn)
-
-                    sql = """
-                        INSERT INTO searchapp_invertedindex (term_id, document_id, tf)
-                        VALUES (%s, %s, %s)
-                        ON DUPLICATE KEY UPDATE tf = VALUES(tf)
-                    """
-                    cursor.execute(sql, (term_id, doc_id, tf))
+    # def add_inverted_index(self, doc_id, term_tf_dict):
+    #     """
+    #     add_inverted_index: this function automatically maintain the "term" table while appending inverted index.
+    #     Args:
+    #         doc_id: document id to be inverted indexed.
+    #         term_tf_dict: a dictionary with tuple meta elements (term, term-frequency)
+    #     """
+    #     with self._get_connection() as conn:
+    #         with conn.cursor() as cursor:
+    #             for term, tf in term_tf_dict.items():
+    #                 term_id = self._get_or_create_term(term, conn)
+    #
+    #                 sql = """
+    #                     INSERT INTO searchapp_invertedindex (term_id, document_id, tf)
+    #                     VALUES (%s, %s, %s)
+    #                     ON DUPLICATE KEY UPDATE tf = VALUES(tf)
+    #                 """
+    #                 cursor.execute(sql, (term_id, doc_id, tf))
 
     def get_documents_by_term(self, term):
         """
@@ -307,11 +307,10 @@ class DBHelper:
     def add_term(self,term_dict):
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
-                # 将字典转换为(term, df)元组列表
+
                 data = [(term, df) for term, df in term_dict.items()]
                 data = list(sorted(data, key=lambda x: x[1], reverse=True))
 
-                # 使用executemany进行批量插入
                 cursor.executemany(
                     "INSERT INTO searchapp_term (term, df) VALUES (%s, %s)",
                     data
@@ -337,9 +336,6 @@ class DBHelper:
                 for term, tf in term_counter.items()]
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
-                # 将字典转换为(term, df)元组列表
-
-                # 使用executemany进行批量插入
                 cursor.executemany(
                     "INSERT INTO searchapp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
                     data

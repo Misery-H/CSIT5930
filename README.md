@@ -14,9 +14,9 @@
 ### Done
 - [x] Initial MySQL backend for Django
 - [x] Design models for data persistence
+- [x] inverted index table (high priority)
+- [x] term table (high priority)
 ### TO-DO
-- [ ] inverted index table (high priority)
-- [ ] term table (high priority)
 - [ ] Use Redis to cache search results
 - [ ] Page rank data model
 - [ ] Description generation
