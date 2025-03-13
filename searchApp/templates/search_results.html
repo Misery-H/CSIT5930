@@ -46,15 +46,75 @@
             <!-- Left Results Section (3/5) -->
             <div class="col-md-7">
                 <div class="results-container">
-                    <p class="results-count">About {{ results|length }} results (in {{ time_consumption }} seconds)</p>
+                    <p class="results-count">About {{ pages|length }} results (in {{ time_consumption }} seconds)</p>
 
-                    {% for result in results %}
-                        <div class="result-item mb-4">
-                            <a href="{{ result.url }}" class="result-url">{{ result.display_url }}</a>
-                            <h3 class="result-title">
-                                <a href="{{ result.url }}">{{ result.title }}</a>
-                            </h3>
-                            <p class="result-snippet">{{ result.snippet }}</p>
+                    {% for page in pages %}
+                        <div class="result-item">
+                            <h1 class="result-url">
+                                <a href="{{ page.url }}">{{ page.display_url }}</a>
+                            </h1>
+
+                            <div class="result-title-container">
+                                <h3 class="result-title">
+                                    <a href="{{ page.url }}">{{ page.title }}</a>
+                                </h3>
+                                <h6 class="result-score">
+                                    {{ page.score }}
+                                </h6>
+                            </div>
+                            <div class="result-snippet">
+                                {{ page.snippet }}
+                                {% if page.desc_ai %}
+                                    <span class="tag_ai_generated">
+                                        AI Generated†
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            {# Show page data: last modify time, size, keywords #}
+                            <p class="result-data"><b>Last modified at:</b> {{ page.last_modify }} <b>Size of this
+                                page:</b> {{ page.size }}</p>
+                            <p class="result-data"><b>Keywords: </b>
+                                {% for keyword in page.keywords %}
+                                    {{ keyword }}
+                                {% endfor %}
+                            </p>
+                            {# Show parents and children pages#}
+                            {% if page.from_docs|length > 0 %}
+                                <p class="result-data"><b>Parents: </b>
+                                    {% for from_doc in page.from_docs %}
+                                        <a href="{{ from_doc.url }}" class="result-data-related">{{ from_doc.title }}</a>
+                                    {% endfor %}
+                                </p>
+                            {% endif %}
+
+                            {% if page.to_docs %}
+                                <p class="result-data">
+                                    <b>Children: </b>
+                                    {% for to_doc in page.to_docs|slice:":10" %}
+                                        <a href="{{ to_doc.url }}" class="result-data-related">{{ to_doc.title }}</a>
+                                    {% endfor %}
+
+                                    {% with total=page.to_docs|length %}
+                                        {% if total > 10 %}
+                                            <span class="extra-links" style="display:none;">
+                                                {% for to_doc in page.to_docs|slice:"10:" %}
+                                                    <a href="{{ to_doc.url }}"
+                                                       class="result-data-related">{{ to_doc.title }}</a>
+                                                {% endfor %}
+                                            </span>
+                                            <button class="toggle-links"
+                                                    data-state="collapsed"
+                                                    data-full-text="collapse（{{ total }} items）"
+                                                    data-collapsed-text="Expand（+{{ total|add:-10 }} children items）"
+                                                    onclick="toggleExtraLinks(this)">
+                                                Expand（+{{ total|add:-10 }} items）
+                                            </button>
+                                        {% endif %}
+                                    {% endwith %}
+                                </p>
+                            {% endif %}
+
                         </div>
                     {% endfor %}
                 </div>
