@@ -54,6 +54,7 @@ class WebSpider:
         self.linkageChild= {}
         self.term_hash={}
         self.invert_term={}
+        self.forward_index=[]
         os.makedirs(data_dir, exist_ok=True)
 
         self.load_index()
@@ -192,9 +193,10 @@ class WebSpider:
                 page_id = self.dBHelper.get_page_id(current_url)
 
             tmp= unidecode(doc['content']).lower()
-            self.invert_term[page_id] = Counter(tmp.split())
-
-            term_set = set(tmp.split())
+            tmp = tmp.split()
+            self.invert_term[page_id] = Counter(tmp)
+            self.forward_index.extend([(position+1,page_id,term) for position,term in enumerate(tmp)])
+            term_set = set(tmp)
             for term in term_set:
                 if not self.term_hash.get(term,False):
                     self.term_hash[term]=1
@@ -222,6 +224,7 @@ class WebSpider:
         self.dBHelper.add_term(self.term_hash)
         term2id = self.dBHelper.get_all_term()
         self.dBHelper.add_inverted_index(self.invert_term,term2id)
+        self.dBHelper.add_forward_index(self.forward_index,term2id)
 
 
 

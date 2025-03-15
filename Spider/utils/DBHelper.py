@@ -340,4 +340,12 @@ class DBHelper:
                     "INSERT INTO searchapp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
                     data
                 )
+    def add_forward_index(self,data,term2id):
+        data=[(position,document_id,term2id[term]) for position,document_id,term in data]
+        with self._get_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.executemany(
+                    "INSERT INTO searchapp_forwardindex ( position,document_id,term_id) VALUES (%s, %s, %s)",
+                    data
+                )
 
