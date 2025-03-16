@@ -56,4 +56,16 @@ class UrlLinkage(models.Model):
                 fields=['from_document', 'to_document'],
             )
         ]
+class ForwardIndex(models.Model):
+    term = models.ForeignKey(Term, on_delete=models.CASCADE)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE)
+    position = models.IntegerField(blank=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                name='unique_term_position',
+                fields=['term_id', 'document_id','position'],
+            )
+        ]
 
