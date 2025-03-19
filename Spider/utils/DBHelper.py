@@ -61,8 +61,8 @@ class DBHelper:
                 # IGNORE is added here based on verifying unique content_hash to avoid duplication.
                 sql = """
                     INSERT IGNORE INTO searchapp_document
-                    (url, content_hash, title, description, content, crawl_time, tf_max,last_modify)
-                    VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s)
+                    (url, content_hash, title, description, content, crawl_time, tf_max,last_modify,page_size)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s, %s)
                 """
 
                 cursor.execute(sql, (
@@ -73,6 +73,7 @@ class DBHelper:
                     document.get("content"),
                     document.get("tf_max"),
                     document.get("last_modify"),
+                    len(document.get("content"))
                 ))
 
                 if cursor.lastrowid == 0:
