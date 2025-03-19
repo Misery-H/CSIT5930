@@ -9,7 +9,7 @@ from django.views.decorators.http import require_GET
 from searchApp.utils import *
 from django.http import StreamingHttpResponse
 from django.utils.html import escape
-from .models import Document, UrlLinkage
+from .models import Document, UrlLinkage, InvertedIndex
 
 
 # Generate display url
@@ -25,6 +25,7 @@ def process_url(url):
 
     result = f"{parsed.scheme}://{domain} > " + ' > '.join(parts)
     return result
+
 
 def search_page(request):
     return render(request, 'search_index.html')
@@ -81,7 +82,8 @@ def search_results(request):
             })
 
         # TODO: fetch keywords
-        keywords = ["keywords1", "keywords2", "keywords3", "keywords4", "keywords5"]
+        keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
+            'term__term', flat=True)[:5]
 
         description_ai = False
         description = doc.description
@@ -97,13 +99,12 @@ def search_results(request):
             'snippet': description,
             'desc_ai': description_ai,
             'last_modify': doc.last_modify,
-            'size': "121KB",  # TODO
+            'size': doc.page_size,
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
             'score': f"Pagerank: {round(doc.pr_score, 4)}"
         })
-
 
     # TODO: REMOVE THIS SLEEP AFTER FORMAL IMPLEMENTATION OF SEARCHING!
     time.sleep(0.5)
@@ -115,7 +116,6 @@ def search_results(request):
         'time_consumption': f"{end - start:.4f}",
         'pages': pages,
     }
-
 
     return render(request, 'search_results.html', context)
 
@@ -165,8 +165,8 @@ def pages(request, page_number=1):
                 'title': link.to_document.title,
             })
 
-        # TODO: fetch keywords
-        keywords = ["keywords1", "keywords2", "keywords3", "keywords4", "keywords5"]
+        keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
+            'term__term', flat=True)[:5]
 
         description_ai = False
         description = doc.description
@@ -182,7 +182,7 @@ def pages(request, page_number=1):
             'snippet': description,
             'desc_ai': description_ai,
             'last_modify': doc.last_modify,
-            'size': "121KB",  # TODO
+            'size': doc.page_size,
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
