@@ -1,7 +1,6 @@
 # CSIT 5930
 
 ## Crawl Part
-
 - [x] Crawl the data from the website
 - [x] Generate four parts of files:
 - - [x] `index.json` - include  URL,ID and Last-Modified
@@ -9,31 +8,35 @@
 - - [x] `urls.txt` - store the URLs
 - - [x] `pages/*.html` - store the raw HTML files
 
-
-## Storage Part
-### Done
+## Logic Part
 - [x] Initial MySQL backend for Django
 - [x] Design models for data persistence
 - [x] inverted index table (high priority)
 - [x] term table (high priority)
-### TO-DO
+- [x] Page rank data model
+- [x] Description generation
+- [ ] TF/IDF implementation
+- [ ] HITS implementation
+- [ ] Search suggestion implementation
+- [ ] Term encoder and vague matching
 - [ ] Use Redis to cache search results
-- [ ] Page rank data model
-- [ ] Description generation
 
-
-## Website (Django and Front-end) Part
-### Done
+## Website Part
 - [x] Main search page
 - [x] Search result page
 - [x] AI suggestion
 - [x] Link Django to MySQL to manage crawled data
-
-### TO-DO
-- [ ] `Pages` page which should contain all pages crawled
-- [ ] Search history
+- [x] `Pages` page which should contain all pages crawled
+- [x] Search history
+- [ ] "Terms" page
 - [ ] Prompt engineering of AI conclusion
 - [ ] Output a log file for AI calls
+- [ ] Show query position in page content
+- [ ] **[Continuous]** better front-end design
+
+## Others
+- [ ] Evaluation of IR performance
+- [ ] Fine-tune weights of TF/IDF, PR, HITS
 
 
 ## Updates
