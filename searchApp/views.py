@@ -6,10 +6,12 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
+from django.db.models import Avg
+
 from searchApp.utils import *
 from django.http import StreamingHttpResponse
 from django.utils.html import escape
-from .models import Document, UrlLinkage, InvertedIndex
+from .models import Document, UrlLinkage, InvertedIndex, Term
 
 
 # Generate display url
@@ -33,18 +35,27 @@ def search_page(request):
 
 @require_GET
 def search_suggestions(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip().lower()
     suggestions = []
     if query:
-        # TODO: Make suggestions
+        suggestions = Term.objects.filter(
+            term__startswith=query
+        ).annotate(
+            avg_pr=Avg('invertedindex__document__pr_score')
+        ).order_by(
+            '-df',
+            '-avg_pr'
+        )[:6]
 
-        suggestions = [
-            f"WIP: suggestion for {query} 1",
-            f"WIP: suggestion for {query} 2",
-            f"WIP: suggestion for {query} 3",
-            f"WIP: suggestion for {query} 4",
-            f"WIP: suggestion for {query} 5",
-        ]
+        suggestions = [term.term for term in suggestions]
+
+        # suggestions = [
+        #     f"WIP: suggestion for {query} 1",
+        #     f"WIP: suggestion for {query} 2",
+        #     f"WIP: suggestion for {query} 3",
+        #     f"WIP: suggestion for {query} 4",
+        #     f"WIP: suggestion for {query} 5",
+        # ]
 
     for i, suggestion in enumerate(suggestions):
         suggestions[i] = escape(suggestion)
