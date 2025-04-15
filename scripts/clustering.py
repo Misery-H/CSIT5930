@@ -20,6 +20,7 @@ MODEL_NAME = 'all-MiniLM-L6-v2'
 MODEL_CACHE = 'model_cache/'
 CLUSTERER_FILE = 'hdbscan_model.pkl'
 
+
 def update_term_clusters():
     conn = pymysql.connect(**DB_CONFIG)
 
