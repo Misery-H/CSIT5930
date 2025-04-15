@@ -17,8 +17,8 @@
 - [x] Description generation
 - [ ] TF/IDF implementation
 - [ ] HITS implementation
-- [ ] Search suggestion implementation
-- [ ] Term encoder and vague matching
+- [x] Search suggestion implementation
+- [x] Term encoder and vague matching
 - [ ] Use Redis to cache search results
 
 ## Website Part
@@ -40,6 +40,26 @@
 
 
 ## Updates
+### **20250415**
+
+The search suggestion feature has been implemented.
+
+Currently, the suggestion is based on the combination of prefix-matching and document quality, to say, use terms from documents with higher page-rank score to make suggestions.
+
+The vague search (semantic based search) has been implemented.
+
+Run the script file `scripts/clustering.py` to cluster terms and output encoding model file & clustering model file.
+
+HDBSCAN lies behind the vague search function, during experiments, it shows a high proportion of terms being clustered as "noise" due to the discreteness of the vocabulary. When handling noise query terms, vague search find its neighbor in the vector space.
+
+**Please do database migration and requirement update before running codes implemented by this branch.**
+
+Front-end part: the style of search-result page is now aligned with `pages` page.
+
+An example of expanding the query term "Taiwan" (which is not in the dictionary)
+![example picture](https://d.shiranai.asia/f/7xF4/Snipaste_2025-04-15_21-20-49.png)
+
+
 ### **20250222**
 Link spider to the database;
 The spider can only insert website data into the database and cannot update the data currently;
