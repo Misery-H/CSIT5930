@@ -30,6 +30,14 @@ class Term(models.Model):
             models.Index(fields=['term']),
         ]
 
+class TermCluster(models.Model):
+    term = models.OneToOneField(Term, on_delete=models.CASCADE, primary_key=True)
+    cluster = models.IntegerField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['cluster']),
+        ]
 
 class InvertedIndex(models.Model):
     term = models.ForeignKey(Term, on_delete=models.CASCADE)

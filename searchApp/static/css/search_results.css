@@ -337,13 +337,6 @@ body {
     color: #70757a;
 }
 
-/* Adjust existing results container */
-.results-container {
-    padding-right: 2rem;
-    max-width: 100%;
-    margin: 0;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .ai-conclusion-container {
@@ -493,4 +486,13 @@ body {
 .side-column-title {
     font-family: "Outfit", serif;
     font-size: 22px;
+}
+
+.label-blue {
+    background-color: #cb86e1;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    margin-bottom: 2px;
+    display: inline;
 }
