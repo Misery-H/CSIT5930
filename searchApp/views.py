@@ -6,10 +6,12 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
+from django.db.models import Avg
+
 from searchApp.utils import *
 from django.http import StreamingHttpResponse
 from django.utils.html import escape
-from .models import Document, UrlLinkage, InvertedIndex
+from .models import Document, UrlLinkage, InvertedIndex, Term
 
 
 # Generate display url
@@ -33,18 +35,19 @@ def search_page(request):
 
 @require_GET
 def search_suggestions(request):
-    query = request.GET.get('q', '')
+    query = request.GET.get('q', '').strip().lower()
     suggestions = []
     if query:
-        # TODO: Make suggestions
+        suggestions = Term.objects.filter(
+            term__startswith=query
+        ).annotate(
+            avg_pr=Avg('invertedindex__document__pr_score')
+        ).order_by(
+            '-df',
+            '-avg_pr'
+        )[:6]
 
-        suggestions = [
-            f"WIP: suggestion for {query} 1",
-            f"WIP: suggestion for {query} 2",
-            f"WIP: suggestion for {query} 3",
-            f"WIP: suggestion for {query} 4",
-            f"WIP: suggestion for {query} 5",
-        ]
+        suggestions = [term.term for term in suggestions]
 
     for i, suggestion in enumerate(suggestions):
         suggestions[i] = escape(suggestion)
@@ -55,16 +58,28 @@ def search_suggestions(request):
 def search_results(request):
     query = request.GET.get('q', '')
     start = time.perf_counter()
+    vague_search = False
     pages = []
 
-    # Temporary doc fetch code
+    # TODO: Parse query terms
+
+    # TODO: This is a temporary doc fetch code
     # TODO: Remove this after implementing formal search logic
     # TODO: Implement formal document fetching using tf/idf
     doc_list = []
     doc_list.append(Document.objects.first())
 
-    for doc in doc_list:
+    # Vague search
+    # When term did not hit vocabulary
+    # TODO: Add logic to judge whether or not call vague search function
+    expanded_query = []
+    if True:
+        expanded_query = vague_searcher.expand_terms(["Taiwan"])
+        vague_search = True
+        # TODO: fetech doc list with expanded query
 
+    # Show docs
+    for doc in doc_list:
         links = UrlLinkage.objects.filter(to_document_id=doc.id).select_related('from_document')
         from_docs = []
         for link in links:
@@ -85,12 +100,16 @@ def search_results(request):
         keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
             'term__term', flat=True)[:5]
 
+
+        # GENAI label judgement
         description_ai = False
         description = doc.description
         if description.split("`")[-1] == "AIDESC":
             description_ai = True
             description = "`".join(description.split("`")[:-1])
 
+
+        # Compose a row (page)
         pages.append({
             'id': doc.id,
             'title': doc.title,
@@ -106,13 +125,13 @@ def search_results(request):
             'score': f"Pagerank: {round(doc.pr_score, 4)}"
         })
 
-    # TODO: REMOVE THIS SLEEP AFTER FORMAL IMPLEMENTATION OF SEARCHING!
-    time.sleep(0.5)
 
     end = time.perf_counter()
 
     context = {
         'query': query,
+        'vague_search': vague_search,
+        'expanded_query': expanded_query,
         'time_consumption': f"{end - start:.4f}",
         'pages': pages,
     }

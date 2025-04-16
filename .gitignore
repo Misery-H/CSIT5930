@@ -182,3 +182,8 @@ urls.txt
 
 /pages/
 /searchApp/migrations/
+/model_cache/
+
+
+# pkl files
+*.pkl
