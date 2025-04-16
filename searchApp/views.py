@@ -3,14 +3,15 @@ import time
 from urllib.parse import urlparse
 
 from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.http import require_GET
 from django.db.models import Avg
+from django.http import JsonResponse
+from django.http import StreamingHttpResponse
+from django.shortcuts import render
+from django.utils.html import escape
+from django.views.decorators.http import require_GET
+from lemminflect import getAllLemmas, getInflection
 
 from searchApp.utils import *
-from django.http import StreamingHttpResponse
-from django.utils.html import escape
 from .models import Document, UrlLinkage, InvertedIndex, Term
 
 
@@ -27,6 +28,52 @@ def process_url(url):
 
     result = f"{parsed.scheme}://{domain} > " + ' > '.join(parts)
     return result
+
+
+def expand_query_term(term):
+    expanded_terms = set()
+    expanded_terms.add(term.lower())
+
+    lemmas = getAllLemmas(term)
+
+    for pos in lemmas:
+        for lemma in lemmas[pos]:
+            if pos == 'NOUN':
+                plural = getInflection(lemma, 'NNS')
+                if plural:
+                    expanded_terms.add(plural[0].lower())
+
+            elif pos == 'VERB':
+                forms = getInflection(lemma, 'VBG')  # Gerund (filming)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBD')  # Past tense (filmed)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBN')  # Past participle (filmed)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBZ')  # 3rd person singular (films)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+    return list(expanded_terms)
+
+
+def process_query(query):
+    terms = query.strip().split()
+    if not terms:
+        return []
+
+    lower_terms = [term.lower() for term in terms]
+
+    all_expanded_terms = set()
+    for term in lower_terms:
+        expanded_terms = expand_query_term(term)
+        all_expanded_terms.update(expanded_terms)
+
+    existing_terms = Term.objects.filter(term__in=list(all_expanded_terms))
+
+    return list(existing_terms)
 
 
 def search_page(request):
@@ -61,22 +108,20 @@ def search_results(request):
     vague_search = False
     pages = []
 
-    # TODO: Parse query terms
+    search_query = process_query(query)
 
-    # TODO: This is a temporary doc fetch code
-    # TODO: Remove this after implementing formal search logic
-    # TODO: Implement formal document fetching using tf/idf
-    doc_list = []
-    doc_list.append(Document.objects.first())
-
-    # Vague search
-    # When term did not hit vocabulary
-    # TODO: Add logic to judge whether or not call vague search function
     expanded_query = []
-    if True:
-        expanded_query = vague_searcher.expand_terms(["Taiwan"])
+    if len(search_query) == 0:
+        existing_expanded_terms = Term.objects.filter(term__in=vague_searcher.expand_terms(query))
         vague_search = True
-        # TODO: fetech doc list with expanded query
+        search_query = list(set(search_query + list(existing_expanded_terms)))
+        expanded_query = [q.term for q in search_query]
+
+    raw_docs = Document.objects.filter(invertedindex__term__in=search_query).distinct()
+    print(search_query)
+
+    # TODO: doc ranking
+    doc_list = raw_docs
 
     # Show docs
     for doc in doc_list:
@@ -100,14 +145,12 @@ def search_results(request):
         keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
             'term__term', flat=True)[:5]
 
-
         # GENAI label judgement
         description_ai = False
         description = doc.description
         if description.split("`")[-1] == "AIDESC":
             description_ai = True
             description = "`".join(description.split("`")[:-1])
-
 
         # Compose a row (page)
         pages.append({
@@ -124,7 +167,6 @@ def search_results(request):
             'to_docs': to_docs,
             'score': f"Pagerank: {round(doc.pr_score, 4)}"
         })
-
 
     end = time.perf_counter()
 

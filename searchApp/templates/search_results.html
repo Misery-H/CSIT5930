@@ -51,15 +51,22 @@
             <!-- Left Results Section (3/5) -->
             <div class="col-md-7">
                 <div class="results-container">
-                    <p class="results-count">
-                        <b class="font-blue">Vague search</b>
-                        find {{ pages|length }} results in {{ time_consumption }} seconds
-                        <br>
-                        Do you mean:
-                        {% for term in expanded_query %}
-                            <b><u>{{term}}</u></b>
-                        {% endfor %} ?
-                    </p>
+                    {% if vague_search %}
+                        <p class="results-count">
+                            <b class="font-blue">Vague search</b>
+                            find {{ pages|length }} results in {{ time_consumption }} seconds
+                            <br>
+                            Do you mean:
+                            {% for term in expanded_query %}
+                                <b><u>{{term}}</u></b>
+                            {% endfor %} ?
+                        </p>
+                    {% else %}
+                        <p class="results-count">
+                            <b class="font-blue">deepsearch</b>
+                            find {{ pages|length }} results in {{ time_consumption }} seconds
+                        </p>
+                    {% endif %}
 
 
                     {% for page in pages %}
