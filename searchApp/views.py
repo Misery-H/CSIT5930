@@ -1,5 +1,8 @@
 import os
 import time
+from collections import defaultdict
+
+import numpy as np
 from urllib.parse import urlparse
 
 from django.core.paginator import Paginator
@@ -118,10 +121,71 @@ def search_results(request):
         expanded_query = [q.term for q in search_query]
 
     raw_docs = Document.objects.filter(invertedindex__term__in=search_query).distinct()
-    print(search_query)
 
-    # TODO: doc ranking
-    doc_list = raw_docs
+    # Relevance score calculation (core)
+    # Calculate query term vector
+    # Magic number: 1.0 for terms from origin query, 0.8 for terms from expansion
+    original_query_term_strs = set([term.lower() for term in query.strip().split()])
+    term_id_to_weight = {
+        term.id: (1.0 if term.term in original_query_term_strs else 0.8)
+        for term in search_query
+    }
+
+    query_term_ids = list(term_id_to_weight.keys())
+    query_vector = np.array([term_id_to_weight[tid] for tid in query_term_ids])
+    query_norm = np.linalg.norm(query_vector)
+
+    # Collect terms idf vector
+    total_docs = Document.objects.count()
+    term_dfs = {term.id: term.df for term in search_query}
+    idf_vector = np.array([
+        np.log((total_docs + 1) / (term_dfs[tid] + 1)) + 1  # smooth
+        for tid in query_term_ids
+    ])
+
+    # Collect tf for all doc-term pairs
+    inv_indexes = InvertedIndex.objects.filter(
+        term_id__in=query_term_ids, document__in=raw_docs
+    ).values('document_id', 'term_id', 'tf')
+
+    # Map doc_id to vector
+    doc_vectors = defaultdict(lambda: np.zeros(len(query_term_ids)))
+
+    term_index = {tid: i for i, tid in enumerate(query_term_ids)}
+
+    for entry in inv_indexes:
+        doc_id = entry['document_id']
+        tid = entry['term_id']
+        tf = entry['tf']
+        idx = term_index[tid]
+        doc_vectors[doc_id][idx] = tf
+
+    # Calculate tf-idf score
+    # Calculate relevance score with cosine similarity
+    # Magic number: compute final ranking score as 0.8*tf/idf + 0.2 * pagerank
+    # TODO: Implement HITS Score Here
+    # TODO: Fine-tune Weight Params
+    scores = {}
+    relevance_scores = {}
+    for doc in raw_docs:
+        doc_vec_raw = doc_vectors[doc.id]
+        doc_tfidf_vec = doc_vec_raw * idf_vector
+        doc_norm = np.linalg.norm(doc_tfidf_vec)
+
+        tfidf_score = np.dot(doc_tfidf_vec, query_vector) / (doc_norm * query_norm) if doc_norm != 0 else 0.0
+        final_score = 0.8 * tfidf_score + 0.2 * doc.pr_score
+        relevance_scores[doc.id] = tfidf_score
+        scores[doc.id] = final_score
+
+    # FOR DEBUG ONLY
+    # print(f"search query: {[term.term for term in search_query]}")
+    # print(f"query_vector: {query_vector}")
+    # print(f"idf_vector: {idf_vector}")
+    # print(f"doc_vectors: {doc_vectors}")
+    # print(f"scores: {scores}")
+
+    # Document ranking
+    doc_list = sorted(raw_docs, key=lambda d: scores.get(d.id, 0), reverse=True)
 
     # Show docs
     for doc in doc_list:
@@ -141,7 +205,6 @@ def search_results(request):
                 'title': link.to_document.title,
             })
 
-        # TODO: fetch keywords
         keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
             'term__term', flat=True)[:5]
 
@@ -165,7 +228,8 @@ def search_results(request):
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
-            'score': f"Pagerank: {round(doc.pr_score, 4)}"
+            'relevance_score': f"TF/IDF: {round(relevance_scores.get(doc.id, 0), 4)}",
+            'pr_score': f"Pagerank: {round(doc.pr_score, 4)}",
         })
 
     end = time.perf_counter()

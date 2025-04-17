@@ -79,8 +79,11 @@
                                 <h3 class="result-title">
                                     <a href="{{ page.url }}">{{ page.title }}</a>
                                 </h3>
-                                <h6 class="result-score">
-                                    {{ page.score }}
+                                <h6 class="result-score" style="background: rgba(201,207,241,0.89)">
+                                    {{ page.relevance_score }}
+                                </h6>
+                                <h6 class="result-score" style="background: rgba(231,173,243,0.89)">
+                                    {{ page.pr_score }}
                                 </h6>
                             </div>
                             <div class="result-snippet">
