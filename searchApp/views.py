@@ -1,18 +1,24 @@
 import os
 import time
+import json
 from urllib.parse import urlparse
-
+from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET
 from django.db.models import Avg
+from django.core.cache import caches
 
 from searchApp.utils import *
 from django.http import StreamingHttpResponse
 from django.utils.html import escape
 from .models import Document, UrlLinkage, InvertedIndex, Term
 
+# Cache instances
+search_results_cache = caches['search_results']
+search_suggestions_cache = caches['search_suggestions']
+term_expansion_cache = caches['term_expansion']
 
 # Generate display url
 def process_url(url):
@@ -36,6 +42,14 @@ def search_page(request):
 @require_GET
 def search_suggestions(request):
     query = request.GET.get('q', '').strip().lower()
+    
+    # Try to get suggestions from cache
+    cache_key = f'suggestions_{query}'
+    cached_suggestions = search_suggestions_cache.get(cache_key)
+    
+    if cached_suggestions is not None:
+        return JsonResponse({'suggestions': cached_suggestions})
+    
     suggestions = []
     if query:
         suggestions = Term.objects.filter(
@@ -51,7 +65,10 @@ def search_suggestions(request):
 
     for i, suggestion in enumerate(suggestions):
         suggestions[i] = escape(suggestion)
-
+    
+    # cache the suggestion
+    search_suggestions_cache.set(cache_key, suggestions, timeout=60 * 60)  
+    
     return JsonResponse({'suggestions': suggestions})
 
 
@@ -60,6 +77,15 @@ def search_results(request):
     start = time.perf_counter()
     vague_search = False
     pages = []
+
+    # try to get result from cache
+    cache_key = f'search_results_{query}'
+    cached_results = search_results_cache.get(cache_key)
+    
+    if cached_results is not None:
+        context = json.loads(cached_results)
+        context['time_consumption'] = f"{time.perf_counter() - start:.4f}"
+        return render(request, 'search_results.html', context)
 
     # TODO: Parse query terms
 
@@ -74,7 +100,17 @@ def search_results(request):
     # TODO: Add logic to judge whether or not call vague search function
     expanded_query = []
     if True:
-        expanded_query = vague_searcher.expand_terms(["Taiwan"])
+        # try to get expanded terms from cache
+        term_cache_key = f'term_expansion_{query}'
+        cached_expanded_terms = term_expansion_cache.get(term_cache_key)
+        
+        if cached_expanded_terms is not None:
+            expanded_query = cached_expanded_terms
+        else:
+            expanded_query = vague_searcher.expand_terms([query])
+            # ache the expanded terms
+            term_expansion_cache.set(term_cache_key, expanded_query, timeout=60 * 60)  
+            
         vague_search = True
         # TODO: fetech doc list with expanded query
 
@@ -135,6 +171,9 @@ def search_results(request):
         'time_consumption': f"{end - start:.4f}",
         'pages': pages,
     }
+    
+    # Cache the search results
+    search_results_cache.set(cache_key, json.dumps(context), timeout=60 * 60)  
 
     return render(request, 'search_results.html', context)
 
@@ -146,6 +185,13 @@ def ai_analysis(request):
 
 
 def pages(request, page_number=1):
+    # try to get cached pages
+    cache_key = f'pages_{page_number}'
+    cached_pages = cache.get(cache_key)
+    
+    if cached_pages is not None:
+        return render(request, 'pages.html', cached_pages)
+
     # LWT: this slide should be processed in SQL layer, instead of loading all records into memory.
     # Please monitor for performance degradation
     doc_count = Document.objects.all().count()
@@ -215,5 +261,8 @@ def pages(request, page_number=1):
         'page_range': page_range,
         'pages': pages,
     }
+    
+    # Cache the pages
+    cache.set(cache_key, context, timeout=60 * 60)  
 
     return render(request, 'pages.html', context)
