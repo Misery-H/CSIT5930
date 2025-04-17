@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from codecs import backslashreplace_errors
 
 from openai import OpenAI
