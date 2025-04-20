@@ -87,13 +87,14 @@ class WebSpider:
             return False
 
     def fetch_page(self, url):
-        try:
-            response = requests.get(url, timeout=(60,60), verify=False)
-            response.raise_for_status()
-            return response.text, response.headers.get('Last-Modified')
-        except Exception as e:
-            print(f"Failed to fetch {url}: {str(e)}")
-            return None, None
+        for i in range(5):
+            try:
+                response = requests.get(url, timeout=(60,60), verify=False)
+                response.raise_for_status()
+                return response.text, response.headers.get('Last-Modified')
+            except Exception as e:
+                print(f"Failed to fetch {url}: {str(e)}")
+        return None, None
 
     def extract_links(self, html, base_url):
         """

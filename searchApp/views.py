@@ -173,7 +173,14 @@ def search_results(request):
         doc_norm = np.linalg.norm(doc_tfidf_vec)
 
         tfidf_score = np.dot(doc_tfidf_vec, query_vector) / (doc_norm * query_norm) if doc_norm != 0 else 0.0
-        final_score = 0.8 * tfidf_score + 0.2 * doc.pr_score
+        hits_score = (doc.authority_score + doc.hub_score) / 2.0
+
+        final_score = (
+                0.7 * tfidf_score +
+                0.2 * doc.pr_score +
+                0.1 * hits_score
+        )
+
         relevance_scores[doc.id] = tfidf_score
         scores[doc.id] = final_score
 
