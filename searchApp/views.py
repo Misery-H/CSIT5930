@@ -1,11 +1,11 @@
+import json
 import os
 import time
-import json
 from collections import defaultdict
+from urllib.parse import urlparse
 
 import numpy as np
-from urllib.parse import urlparse
-from django.core.cache import cache
+from django.core.cache import caches
 from django.core.paginator import Paginator
 from django.db.models import Avg
 from django.http import JsonResponse
@@ -13,19 +13,16 @@ from django.http import StreamingHttpResponse
 from django.shortcuts import render
 from django.utils.html import escape
 from django.views.decorators.http import require_GET
-from django.db.models import Avg
-from django.core.cache import caches
 from lemminflect import getAllLemmas, getInflection
 
 from searchApp.utils import *
-from django.http import StreamingHttpResponse
-from django.utils.html import escape
 from .models import Document, UrlLinkage, InvertedIndex, Term
 
 # Cache instances
 search_results_cache = caches['search_results']
 search_suggestions_cache = caches['search_suggestions']
 term_expansion_cache = caches['term_expansion']
+
 
 # Generate display url
 def process_url(url):
@@ -274,7 +271,6 @@ def search_results(request):
             'pr_score': f"P: {round(doc.pr_score, 4)}",
             'final_score': f"Score: {round(scores.get(doc.id, 0), 4)}",
         })
-
 
     end = time.perf_counter()
 
