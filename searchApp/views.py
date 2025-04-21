@@ -160,13 +160,12 @@ def search_results(request):
         idx = term_index[tid]
         doc_vectors[doc_id][idx] = tf
 
-    # Calculate tf-idf score
-    # Calculate relevance score with cosine similarity
-    # Magic number: compute final ranking score as 0.8*tf/idf + 0.2 * pagerank
-    # TODO: Implement HITS Score Here
+    # Calculate ranking score
+    # Magic number: compute final ranking score as 0.7 * tf/idf + 0.2 * pagerank + 0.1 * HITS
     # TODO: Fine-tune Weight Params
     scores = {}
     relevance_scores = {}
+    hits_scores = {}
     for doc in raw_docs:
         doc_vec_raw = doc_vectors[doc.id]
         doc_tfidf_vec = doc_vec_raw * idf_vector
@@ -181,15 +180,9 @@ def search_results(request):
                 0.1 * hits_score
         )
 
+        hits_scores[doc.id] = hits_score
         relevance_scores[doc.id] = tfidf_score
         scores[doc.id] = final_score
-
-    # FOR DEBUG ONLY
-    # print(f"search query: {[term.term for term in search_query]}")
-    # print(f"query_vector: {query_vector}")
-    # print(f"idf_vector: {idf_vector}")
-    # print(f"doc_vectors: {doc_vectors}")
-    # print(f"scores: {scores}")
 
     # Document ranking
     doc_list = sorted(raw_docs, key=lambda d: scores.get(d.id, 0), reverse=True)
@@ -235,8 +228,10 @@ def search_results(request):
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
-            'relevance_score': f"TF/IDF: {round(relevance_scores.get(doc.id, 0), 4)}",
-            'pr_score': f"Pagerank: {round(doc.pr_score, 4)}",
+            'relevance_score': f"R: {round(relevance_scores.get(doc.id, 0), 4)}",
+            'hits_score': f"H: {round(hits_scores.get(doc.id, 0), 4)}",
+            'pr_score': f"P: {round(doc.pr_score, 4)}",
+            'final_score': f"Score: {round(scores.get(doc.id, 0), 4)}",
         })
 
     end = time.perf_counter()
