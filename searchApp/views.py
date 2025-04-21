@@ -1,16 +1,20 @@
 import os
 import time
+from collections import defaultdict
+
+import numpy as np
 from urllib.parse import urlparse
 
 from django.core.paginator import Paginator
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.views.decorators.http import require_GET
 from django.db.models import Avg
+from django.http import JsonResponse
+from django.http import StreamingHttpResponse
+from django.shortcuts import render
+from django.utils.html import escape
+from django.views.decorators.http import require_GET
+from lemminflect import getAllLemmas, getInflection
 
 from searchApp.utils import *
-from django.http import StreamingHttpResponse
-from django.utils.html import escape
 from .models import Document, UrlLinkage, InvertedIndex, Term
 
 
@@ -27,6 +31,52 @@ def process_url(url):
 
     result = f"{parsed.scheme}://{domain} > " + ' > '.join(parts)
     return result
+
+
+def expand_query_term(term):
+    expanded_terms = set()
+    expanded_terms.add(term.lower())
+
+    lemmas = getAllLemmas(term)
+
+    for pos in lemmas:
+        for lemma in lemmas[pos]:
+            if pos == 'NOUN':
+                plural = getInflection(lemma, 'NNS')
+                if plural:
+                    expanded_terms.add(plural[0].lower())
+
+            elif pos == 'VERB':
+                forms = getInflection(lemma, 'VBG')  # Gerund (filming)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBD')  # Past tense (filmed)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBN')  # Past participle (filmed)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+                forms = getInflection(lemma, 'VBZ')  # 3rd person singular (films)
+                if forms: expanded_terms.update([f.lower() for f in forms])
+
+    return list(expanded_terms)
+
+
+def process_query(query):
+    terms = query.strip().split()
+    if not terms:
+        return []
+
+    lower_terms = [term.lower() for term in terms]
+
+    all_expanded_terms = set()
+    for term in lower_terms:
+        expanded_terms = expand_query_term(term)
+        all_expanded_terms.update(expanded_terms)
+
+    existing_terms = Term.objects.filter(term__in=list(all_expanded_terms))
+
+    return list(existing_terms)
 
 
 def search_page(request):
@@ -61,22 +111,81 @@ def search_results(request):
     vague_search = False
     pages = []
 
-    # TODO: Parse query terms
+    search_query = process_query(query)
 
-    # TODO: This is a temporary doc fetch code
-    # TODO: Remove this after implementing formal search logic
-    # TODO: Implement formal document fetching using tf/idf
-    doc_list = []
-    doc_list.append(Document.objects.first())
-
-    # Vague search
-    # When term did not hit vocabulary
-    # TODO: Add logic to judge whether or not call vague search function
     expanded_query = []
-    if True:
-        expanded_query = vague_searcher.expand_terms(["Taiwan"])
+    if len(search_query) == 0:
+        existing_expanded_terms = Term.objects.filter(term__in=vague_searcher.expand_terms(query))
         vague_search = True
-        # TODO: fetech doc list with expanded query
+        search_query = list(set(search_query + list(existing_expanded_terms)))
+        expanded_query = [q.term for q in search_query]
+
+    raw_docs = Document.objects.filter(invertedindex__term__in=search_query).distinct()
+
+    # Relevance score calculation (core)
+    # Calculate query term vector
+    # Magic number: 1.0 for terms from origin query, 0.8 for terms from expansion
+    original_query_term_strs = set([term.lower() for term in query.strip().split()])
+    term_id_to_weight = {
+        term.id: (1.0 if term.term in original_query_term_strs else 0.8)
+        for term in search_query
+    }
+
+    query_term_ids = list(term_id_to_weight.keys())
+    query_vector = np.array([term_id_to_weight[tid] for tid in query_term_ids])
+    query_norm = np.linalg.norm(query_vector)
+
+    # Collect terms idf vector
+    total_docs = Document.objects.count()
+    term_dfs = {term.id: term.df for term in search_query}
+    idf_vector = np.array([
+        np.log((total_docs + 1) / (term_dfs[tid] + 1)) + 1  # smooth
+        for tid in query_term_ids
+    ])
+
+    # Collect tf for all doc-term pairs
+    inv_indexes = InvertedIndex.objects.filter(
+        term_id__in=query_term_ids, document__in=raw_docs
+    ).values('document_id', 'term_id', 'tf')
+
+    # Map doc_id to vector
+    doc_vectors = defaultdict(lambda: np.zeros(len(query_term_ids)))
+
+    term_index = {tid: i for i, tid in enumerate(query_term_ids)}
+
+    for entry in inv_indexes:
+        doc_id = entry['document_id']
+        tid = entry['term_id']
+        tf = entry['tf']
+        idx = term_index[tid]
+        doc_vectors[doc_id][idx] = tf
+
+    # Calculate ranking score
+    # Magic number: compute final ranking score as 0.7 * tf/idf + 0.2 * pagerank + 0.1 * HITS
+    # TODO: Fine-tune Weight Params
+    scores = {}
+    relevance_scores = {}
+    hits_scores = {}
+    for doc in raw_docs:
+        doc_vec_raw = doc_vectors[doc.id]
+        doc_tfidf_vec = doc_vec_raw * idf_vector
+        doc_norm = np.linalg.norm(doc_tfidf_vec)
+
+        tfidf_score = np.dot(doc_tfidf_vec, query_vector) / (doc_norm * query_norm) if doc_norm != 0 else 0.0
+        hits_score = (doc.authority_score + doc.hub_score) / 2.0
+
+        final_score = (
+                0.7 * tfidf_score +
+                0.2 * doc.pr_score +
+                0.1 * hits_score
+        )
+
+        hits_scores[doc.id] = hits_score
+        relevance_scores[doc.id] = tfidf_score
+        scores[doc.id] = final_score
+
+    # Document ranking
+    doc_list = sorted(raw_docs, key=lambda d: scores.get(d.id, 0), reverse=True)
 
     # Show docs
     for doc in doc_list:
@@ -96,10 +205,8 @@ def search_results(request):
                 'title': link.to_document.title,
             })
 
-        # TODO: fetch keywords
         keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
             'term__term', flat=True)[:5]
-
 
         # GENAI label judgement
         description_ai = False
@@ -107,7 +214,6 @@ def search_results(request):
         if description.split("`")[-1] == "AIDESC":
             description_ai = True
             description = "`".join(description.split("`")[:-1])
-
 
         # Compose a row (page)
         pages.append({
@@ -122,9 +228,11 @@ def search_results(request):
             'keywords': keywords,
             'from_docs': from_docs,
             'to_docs': to_docs,
-            'score': f"Pagerank: {round(doc.pr_score, 4)}"
+            'relevance_score': f"R: {round(relevance_scores.get(doc.id, 0), 4)}",
+            'hits_score': f"H: {round(hits_scores.get(doc.id, 0), 4)}",
+            'pr_score': f"P: {round(doc.pr_score, 4)}",
+            'final_score': f"Score: {round(scores.get(doc.id, 0), 4)}",
         })
-
 
     end = time.perf_counter()
 

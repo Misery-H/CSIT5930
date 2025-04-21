@@ -198,6 +198,13 @@ body {
     gap: 10px;
 }
 
+.result-score-container {
+    display: flex;
+    align-items: flex-end;
+    margin-top: 5px;
+    gap: 10px;
+}
+
 .result-title {
     font-size: 22px;
     line-height: 1.3;
@@ -303,6 +310,7 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     position: sticky;
     top: 120px;
+    margin-bottom: 30px;
     height: calc(100vh - 140px);
     overflow-y: auto;
 }
