@@ -161,7 +161,6 @@ def search_results(request):
         search_query = list(set(search_query + list(existing_expanded_terms)))
         expanded_query = [q.term for q in search_query]
 
-
     raw_docs = Document.objects.filter(invertedindex__term__in=search_query).distinct()
 
     # Relevance score calculation (core)
