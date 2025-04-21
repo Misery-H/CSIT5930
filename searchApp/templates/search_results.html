@@ -8,6 +8,7 @@
     <link rel="icon" href="{% static 'images/fav.png' %}" type="image/x-icon">
     <link rel="stylesheet" href="{% static 'css/search_results.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <!--    Bootstrap-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -51,15 +52,22 @@
             <!-- Left Results Section (3/5) -->
             <div class="col-md-7">
                 <div class="results-container">
-                    <p class="results-count">
-                        <b class="font-blue">Vague search</b>
-                        find {{ pages|length }} results in {{ time_consumption }} seconds
-                        <br>
-                        Do you mean:
-                        {% for term in expanded_query %}
-                            <b><u>{{term}}</u></b>
-                        {% endfor %} ?
-                    </p>
+                    {% if vague_search %}
+                        <p class="results-count">
+                            <b class="font-blue">Vague search</b>
+                            find {{ pages|length }} results in {{ time_consumption }} seconds
+                            <br>
+                            Do you mean:
+                            {% for term in expanded_query %}
+                                <b><u>{{term}}</u></b>
+                            {% endfor %} ?
+                        </p>
+                    {% else %}
+                        <p class="results-count">
+                            <b class="font-blue">deepsearch</b>
+                            find {{ pages|length }} results in {{ time_consumption }} seconds
+                        </p>
+                    {% endif %}
 
 
                     {% for page in pages %}
@@ -72,10 +80,23 @@
                                 <h3 class="result-title">
                                     <a href="{{ page.url }}">{{ page.title }}</a>
                                 </h3>
-                                <h6 class="result-score">
-                                    {{ page.score }}
+                            </div>
+
+                            <div class="result-score-container">
+                                <h6 class="result-score" style="background: rgba(203,239,185,0.89)">
+                                    {{ page.final_score }}
+                                </h6>
+                                <h6 class="result-score" style="background: rgba(201,207,241,0.89)">
+                                    {{ page.relevance_score }}
+                                </h6>
+                                <h6 class="result-score" style="background: rgba(201,207,241,0.89)">
+                                    {{ page.pr_score }}
+                                </h6>
+                                <h6 class="result-score" style="background: rgba(201,207,241,0.89)">
+                                    {{ page.hits_score }}
                                 </h6>
                             </div>
+
                             <div class="result-snippet">
                                 {{ page.snippet }}
                                 {% if page.desc_ai %}
@@ -152,6 +173,56 @@
                     <div id="ai-content" class="ai-streaming-content"></div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="results-footer">
+    <div class="result-body">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="/search" class="result-logo">
+                        <img src="{% static 'images/logo.png' %}" alt="Site Logo">
+                    </a>
+                    <p class="results-footer-note">
+                        This is the course project for HKUST CSIT 5930 Search Engline Applications.
+                    </p>
+
+                    <p class="results-footer-note">
+                        We open source with the MIT License.
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="results-footer-item">
+                        <b>Portals</b>
+                        <a href="/search" class="nav-link">|- Back to main page</a>
+                        <a href="/pages" class="nav-link">|- Pages</a>
+                        <a href="/keywords" class="nav-link">|- Keywords</a>
+                        <a href="/history" class="nav-link">|- History</a>
+                        <a href="/admin" class="nav-link">|- Admin</a>
+                        <a href="https://github.com/Misery-H/CSIT5930/blob/main/README.md" class="nav-link">|- About</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <p>
+                        <i class="fa fa-github" style="font-size:14px"></i> View our project on Github: <a href="https://github.com/Misery-H/CSIT5930/" id="footer-github-link">CSIT5930</a>
+                    </p>
+                    <p>
+                        <b>deep</b>search stands for:<br>
+                        Generate content with <b>deep</b>seek LLM.<br>
+                        Semantic analysis using embedding via <b>deep</b> neural networks.
+                    </p>
+
+                </div>
+            </div>
+
+            <div class="row">
+                <footer class="copyright-footer">
+                    <p>&copy; 2025 CSIT5930. All rights reserved.</p>
+                </footer>
             </div>
         </div>
     </div>

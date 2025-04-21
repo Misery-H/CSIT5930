@@ -12,7 +12,8 @@ class Document(models.Model):
     last_modify = models.DateTimeField(auto_now_add=True)
     page_size = models.IntegerField(default=0)
     pr_score = models.FloatField(default=0.00)
-    hits_score = models.FloatField(default=0.00)
+    authority_score = models.FloatField(default=0.0)
+    hub_score = models.FloatField(default=0.0)
 
     class Meta:
         indexes = [
