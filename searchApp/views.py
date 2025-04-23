@@ -135,6 +135,7 @@ def search_results(request):
     if cached_results is not None:
         context = json.loads(cached_results)
         context['time_consumption'] = f"{time.perf_counter() - start:.4f}"
+        context['cache_hit'] = True
         return render(request, 'search_results.html', context)
 
     search_query = process_query(query)
@@ -243,8 +244,11 @@ def search_results(request):
                 'title': link.to_document.title,
             })
 
-        keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
+        keywords_db = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by(
+            '-tf').values_list(
             'term__term', flat=True)[:5]
+
+        keywords = [keyword for keyword in keywords_db]
 
         # GENAI label judgement
         description_ai = False
@@ -261,7 +265,7 @@ def search_results(request):
             'url': doc.url,
             'snippet': description,
             'desc_ai': description_ai,
-            'last_modify': doc.last_modify,
+            'last_modify': str(doc.last_modify),
             'size': doc.page_size,
             'keywords': keywords,
             'from_docs': from_docs,
@@ -280,10 +284,17 @@ def search_results(request):
         'expanded_query': expanded_query,
         'time_consumption': f"{end - start:.4f}",
         'pages': pages,
+        'cache_hit': False,
     }
 
+    save_context = {
+        'query': query,
+        'pages': pages,
+    }
+    # print(save_context)
+
     # Cache the search results
-    search_results_cache.set(cache_key, json.dumps(context), timeout=60 * 60)
+    search_results_cache.set(cache_key, json.dumps(save_context), timeout=60 * 60)
 
     return render(request, 'search_results.html', context)
 
