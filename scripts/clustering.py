@@ -29,7 +29,7 @@ def update_term_clusters():
             # Get all terms with their document frequency
             cursor.execute("""
                 SELECT t.id, t.term, t.df 
-                FROM searchapp_term t
+                FROM searchApp_term t
                 ORDER BY t.df DESC
             """)
             rows = cursor.fetchall()
@@ -64,7 +64,7 @@ def update_term_clusters():
 
             # Update database
             update_sql = """
-                            INSERT INTO searchapp_termcluster (term_id, cluster)
+                            INSERT INTO searchApp_termcluster (term_id, cluster)
                             VALUES (%s, %s)
                             ON DUPLICATE KEY UPDATE cluster = VALUES(cluster)
                         """
@@ -87,9 +87,9 @@ def expand_query(query_term):
         with conn.cursor() as cursor:
             # Check if term exists
             cursor.execute("""
-                SELECT cluster FROM searchapp_termcluster
-                JOIN searchapp_term ON searchapp_termcluster.term_id = searchapp_term.id
-                WHERE searchapp_term.term = %s
+                SELECT cluster FROM searchApp_termcluster
+                JOIN searchApp_term ON searchApp_termcluster.term_id = searchApp_term.id
+                WHERE searchApp_term.term = %s
                 LIMIT 1
             """, (query_term,))
             result = cursor.fetchone()
@@ -114,7 +114,7 @@ def expand_query(query_term):
                 # Handle noise prediction
                 if cluster_id == -1:
                     # Find nearest neighbor
-                    cursor.execute("SELECT id, term FROM searchapp_term")
+                    cursor.execute("SELECT id, term FROM searchApp_term")
                     all_terms = cursor.fetchall()
                     term_texts = [t[1] for t in all_terms]
                     embeddings = model.encode(term_texts)
@@ -124,7 +124,7 @@ def expand_query(query_term):
 
                     # Get cluster of nearest neighbor
                     cursor.execute("""
-                        SELECT cluster FROM searchapp_termcluster
+                        SELECT cluster FROM searchApp_termcluster
                         WHERE term_id = %s
                     """, (nearest_term_id,))
                     cluster_id = cursor.fetchone()[0]
@@ -132,9 +132,9 @@ def expand_query(query_term):
             # Get top terms in cluster
             cursor.execute("""
                 SELECT t.term, SUM(ii.tf) AS total_tf
-                FROM searchapp_termcluster tc
-                JOIN searchapp_term t ON tc.term_id = t.id
-                JOIN searchapp_invertedindex ii ON t.id = ii.term_id
+                FROM searchApp_termcluster tc
+                JOIN searchApp_term t ON tc.term_id = t.id
+                JOIN searchApp_invertedindex ii ON t.id = ii.term_id
                 WHERE tc.cluster = %s
                 AND t.term != %s
                 GROUP BY t.term

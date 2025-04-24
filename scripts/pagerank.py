@@ -21,7 +21,7 @@ def calculate_pagerank():
 
         with conn.cursor() as cursor:
             # Get all documents and create ID mapping
-            cursor.execute("SELECT id FROM searchapp_document")
+            cursor.execute("SELECT id FROM searchApp_document")
             doc_ids = [row[0] for row in cursor.fetchall()]
             n_docs = len(doc_ids)
             if n_docs == 0:
@@ -30,7 +30,7 @@ def calculate_pagerank():
             id_to_idx = {doc_id: i for i, doc_id in enumerate(doc_ids)}
 
             # Get all links with progress bar
-            cursor.execute("SELECT from_document_id, to_document_id FROM search_engine.searchapp_urllinkage")
+            cursor.execute("SELECT from_document_id, to_document_id FROM search_engine.searchApp_urllinkage")
             links = cursor.fetchall()
 
             # Convert links to numpy indices
@@ -102,7 +102,7 @@ def save_to_db(pr_score):
 
             # Prepare SQL statement
             update_query = """
-                    UPDATE searchapp_document 
+                    UPDATE searchApp_document 
                     SET pr_score = %s 
                     WHERE id = %s
                 """

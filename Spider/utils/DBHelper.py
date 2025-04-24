@@ -60,7 +60,7 @@ class DBHelper:
             with conn.cursor() as cursor:
                 # IGNORE is added here based on verifying unique content_hash to avoid duplication.
                 sql = """
-                    INSERT IGNORE INTO searchapp_document
+                    INSERT IGNORE INTO searchApp_document
                     (url, content_hash, title, description, content, crawl_time, tf_max,last_modify,page_size)
                     VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s, %s)
                 """
@@ -77,7 +77,7 @@ class DBHelper:
                 ))
 
                 if cursor.lastrowid == 0:
-                    cursor.execute("SELECT id FROM searchapp_document WHERE content_hash = %s",
+                    cursor.execute("SELECT id FROM searchApp_document WHERE content_hash = %s",
                                    (document.get("content_hash")))
                     doc_id = cursor.fetchone()[0]
                 else:
@@ -100,7 +100,7 @@ class DBHelper:
             with conn.cursor() as cursor:
                 # IGNORE is added here based on verifying unique content_hash to avoid duplication.
                 sql = """
-                    UPDATE searchapp_document
+                    UPDATE searchApp_document
                     SET url = %s, content_hash = %s, title = %s, description = %s, content = %s, crawl_time = NOW(), tf_max = %s,last_modify = %s
                     WHERE id = %s
                 """
@@ -118,7 +118,7 @@ class DBHelper:
                 ))
 
                 if cursor.lastrowid == 0:
-                    cursor.execute("SELECT id FROM searchapp_document WHERE content_hash = %s",
+                    cursor.execute("SELECT id FROM searchApp_document WHERE content_hash = %s",
                                    (document.get("content_hash")))
                     doc_id = cursor.fetchone()[0]
                 else:
@@ -139,14 +139,14 @@ class DBHelper:
         with conn.cursor() as cursor:
             # Meta operation
             sql = """
-                INSERT INTO searchapp_term (term, df) 
+                INSERT INTO searchApp_term (term, df) 
                 VALUES (%s, 1)
                 ON DUPLICATE KEY UPDATE df = df + 1
             """
             cursor.execute(sql, (term,))
 
             # Fetch term id
-            cursor.execute("SELECT id FROM searchapp_term WHERE term = %s", (term,))
+            cursor.execute("SELECT id FROM searchApp_term WHERE term = %s", (term,))
             term_id = cursor.fetchone()[0]
             return term_id
 
@@ -182,7 +182,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id FROM searchapp_term WHERE term = %s",
+                    "SELECT id FROM searchApp_term WHERE term = %s",
                     (term,)
                 )
                 term_result = cursor.fetchone()
@@ -202,8 +202,8 @@ class DBHelper:
                         d.crawl_time,
                         d.tf_max,
                         ii.tf
-                    FROM searchapp_document d
-                    INNER JOIN searchapp_invertedindex ii 
+                    FROM searchApp_document d
+                    INNER JOIN searchApp_invertedindex ii 
                         ON d.id = ii.document_id
                     WHERE ii.term_id = %s
                     ORDER BY ii.tf DESC
@@ -235,7 +235,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 sql = """
-                   INSERT IGNORE INTO searchapp_urllinkage (from_document_id, to_document_id)
+                   INSERT IGNORE INTO searchApp_urllinkage (from_document_id, to_document_id)
                    VALUES (%s, %s)
                 """
                 cursor.execute(sql, (from_doc_id, to_doc_id))
@@ -249,7 +249,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 sql = """
-                   DELETE FROM searchapp_urllinkage WHERE from_document_id = %s 
+                   DELETE FROM searchApp_urllinkage WHERE from_document_id = %s 
                 """
                 cursor.execute(sql, (from_doc_id))
     def get_all_documents(self):
@@ -269,7 +269,7 @@ class DBHelper:
                         d.crawl_time,
                         d.tf_max,
                         d.last_modify
-                    FROM searchapp_document d
+                    FROM searchApp_document d
                     """
                 )
 
@@ -297,7 +297,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id FROM searchapp_document WHERE url = %s",
+                    "SELECT id FROM searchApp_document WHERE url = %s",
                     (current_url,)
                 )
                 result = cursor.fetchone()
@@ -313,7 +313,7 @@ class DBHelper:
                 data = list(sorted(data, key=lambda x: x[1], reverse=True))
 
                 cursor.executemany(
-                    "INSERT INTO searchapp_term (term, df) VALUES (%s, %s)",
+                    "INSERT INTO searchApp_term (term, df) VALUES (%s, %s)",
                     data
                 )
 
@@ -323,7 +323,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id,term FROM searchapp_term",
+                    "SELECT id,term FROM searchApp_term",
 
                 )
                 row = cursor.fetchall()
@@ -338,7 +338,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.executemany(
-                    "INSERT INTO searchapp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
+                    "INSERT INTO searchApp_invertedindex (tf, document_id,term_id) VALUES (%s, %s, %s)",
                     data
                 )
     def add_forward_index(self,data,term2id):
@@ -346,7 +346,7 @@ class DBHelper:
         with self._get_connection() as conn:
             with conn.cursor() as cursor:
                 cursor.executemany(
-                    "INSERT INTO searchapp_forwardindex ( position,document_id,term_id) VALUES (%s, %s, %s)",
+                    "INSERT INTO searchApp_forwardindex ( position,document_id,term_id) VALUES (%s, %s, %s)",
                     data
                 )
 

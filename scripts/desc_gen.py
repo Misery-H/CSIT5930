@@ -67,14 +67,14 @@ def generate_desc():
 
         with conn.cursor() as cursor:
             # Get all documents and create ID mapping
-            cursor.execute("SELECT id FROM searchapp_document")
+            cursor.execute("SELECT id FROM searchApp_document")
 
             # Divide into sections
             page_size = 50
             offset = 0
 
             while True:
-                cursor.execute("SELECT * FROM searchapp_document LIMIT %s OFFSET %s", (page_size, offset))
+                cursor.execute("SELECT * FROM searchApp_document LIMIT %s OFFSET %s", (page_size, offset))
                 records = cursor.fetchall()
 
                 if not records:
@@ -97,7 +97,7 @@ def generate_desc():
 
                                 # 更新数据库
                                 cursor.execute(
-                                    "UPDATE searchapp_document SET description = %s WHERE id = %s",
+                                    "UPDATE searchApp_document SET description = %s WHERE id = %s",
                                     (new_description, record['id'])
                                 )
                                 conn.commit()

@@ -21,7 +21,7 @@ def calculate_hits(max_iter=100, tol=1e-6):
 
         with conn.cursor() as cursor:
             # Get all documents and create ID mapping
-            cursor.execute("SELECT id FROM searchapp_document")
+            cursor.execute("SELECT id FROM searchApp_document")
             doc_ids = [row[0] for row in cursor.fetchall()]
             n_docs = len(doc_ids)
             if n_docs == 0:
@@ -31,7 +31,7 @@ def calculate_hits(max_iter=100, tol=1e-6):
             idx_to_id = {i: doc_id for doc_id, i in id_to_idx.items()}
 
             # Get all links
-            cursor.execute("SELECT from_document_id, to_document_id FROM searchapp_urllinkage")
+            cursor.execute("SELECT from_document_id, to_document_id FROM searchApp_urllinkage")
             links = cursor.fetchall()
 
             # Convert links to numpy indices
@@ -93,7 +93,7 @@ def save_hits_to_db(score_dict):
             items = list(score_dict.items())
 
             update_query = """
-                UPDATE searchapp_document 
+                UPDATE searchApp_document 
                 SET authority_score = %s, hub_score = %s
                 WHERE id = %s
             """
