@@ -355,6 +355,21 @@
             });
     }
 
+    function toggleExtraLinks(button) {
+        const extraLinks = button.previousElementSibling;
+        const isCollapsed = button.dataset.state === 'collapsed';
+
+        if (isCollapsed) {
+            extraLinks.style.display = 'inline';
+            button.textContent = button.dataset.fullText;
+            button.dataset.state = 'expanded';
+        } else {
+            extraLinks.style.display = 'none';
+            button.textContent = button.dataset.collapsedText;
+            button.dataset.state = 'collapsed';
+        }
+    }
+
 </script>
 
 </body>
