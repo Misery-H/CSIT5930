@@ -32,6 +32,10 @@ DEBUG = True
 # For deployment
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://s.shiranai.asia",
+]
+
 # Application definition
 
 INSTALLED_APPS = [
