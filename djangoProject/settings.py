@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'searchApp.apps.SearchappConfig',
+    'unfold',
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -53,6 +54,28 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+
+UNFOLD = {
+    "SITE_TITLE": "deepsearch",
+    "SITE_HEADER": "deepsearch dashboard",
+    "SITE_LOGO": {
+        "light": lambda request: static("images/favicon.ico"),
+        "dark": lambda request: static("images/favicon.ico"),
+    },
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/svg+xml",
+            "href": lambda request: static("images/favicon.ico"),
+        },
+    ],
+}
+
 
 ROOT_URLCONF = "djangoProject.urls"
 
@@ -134,11 +157,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "/static/"
-
-if DEBUG:
-    STATICFILES_DIRS = [
-        os.path.join(BASE_DIR, 'static'),  # For project-wide static files
-    ]
 
 # For production (later)
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
