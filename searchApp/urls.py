@@ -14,6 +14,7 @@ urlpatterns = [
     path('result/', views.search_results, name='search_results'),
     path('ai-analysis/', views.ai_analysis, name='ai_analysis'),
     path('pages/<int:page_number>/', views.pages, name='pages'),
+    path('about/', views.about, name='about'),
     path('pages/', views.pages, {'page_number': 1}),  # 设置默认参数
 
 ]

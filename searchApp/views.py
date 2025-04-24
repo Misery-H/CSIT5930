@@ -151,9 +151,8 @@ def search_results(request):
             existing_expanded_terms = cached_expanded_terms
         else:
             existing_expanded_terms = Term.objects.filter(term__in=vague_searcher.expand_terms(query))
-            expanded_query = vague_searcher.expand_terms([query])
             # Cache the expanded terms
-            term_expansion_cache.set(term_cache_key, expanded_query, timeout=60 * 60)
+            term_expansion_cache.set(term_cache_key, existing_expanded_terms, timeout=60 * 60)
 
         vague_search = True
         search_query = list(set(search_query + list(existing_expanded_terms)))
@@ -410,3 +409,10 @@ def pages(request, page_number=1):
     }
 
     return render(request, 'pages.html', context)
+
+def about(request):
+
+    context = {
+    }
+
+    return render(request, 'about.html', context)
