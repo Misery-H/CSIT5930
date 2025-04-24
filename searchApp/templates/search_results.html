@@ -52,7 +52,12 @@
             <!-- Left Results Section (3/5) -->
             <div class="col-md-7">
                 <div class="results-container">
-                    {% if vague_search %}
+                    {% if cache_hit %}
+                        <p class="results-count">
+                            <b class="font-blue" style="color: red">deepsearch caching</b>
+                            find {{ pages|length }} results in {{ time_consumption }} seconds
+                        </p>
+                    {% elif vague_search %}
                         <p class="results-count">
                             <b class="font-blue">Vague search</b>
                             find {{ pages|length }} results in {{ time_consumption }} seconds

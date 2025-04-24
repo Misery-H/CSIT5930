@@ -1,10 +1,11 @@
+import json
 import os
 import time
 from collections import defaultdict
-
-import numpy as np
 from urllib.parse import urlparse
 
+import numpy as np
+from django.core.cache import caches
 from django.core.paginator import Paginator
 from django.db.models import Avg
 from django.http import JsonResponse
@@ -16,6 +17,11 @@ from lemminflect import getAllLemmas, getInflection
 
 from searchApp.utils import *
 from .models import Document, UrlLinkage, InvertedIndex, Term
+
+# Cache instances
+search_results_cache = caches['search_results']
+search_suggestions_cache = caches['search_suggestions']
+term_expansion_cache = caches['term_expansion']
 
 
 # Generate display url
@@ -86,6 +92,14 @@ def search_page(request):
 @require_GET
 def search_suggestions(request):
     query = request.GET.get('q', '').strip().lower()
+
+    # Try to get suggestions from cache
+    cache_key = f'suggestions_{query}'
+    cached_suggestions = search_suggestions_cache.get(cache_key)
+
+    if cached_suggestions is not None:
+        return JsonResponse({'suggestions': cached_suggestions})
+
     suggestions = []
     if query:
         suggestions = Term.objects.filter(
@@ -102,6 +116,9 @@ def search_suggestions(request):
     for i, suggestion in enumerate(suggestions):
         suggestions[i] = escape(suggestion)
 
+    # cache the suggestion
+    search_suggestions_cache.set(cache_key, suggestions, timeout=60 * 60)
+
     return JsonResponse({'suggestions': suggestions})
 
 
@@ -111,11 +128,33 @@ def search_results(request):
     vague_search = False
     pages = []
 
+    # try to get result from cache
+    cache_key = f'search_results_{query}'
+    cached_results = search_results_cache.get(cache_key)
+
+    if cached_results is not None:
+        context = json.loads(cached_results)
+        context['time_consumption'] = f"{time.perf_counter() - start:.4f}"
+        context['cache_hit'] = True
+        return render(request, 'search_results.html', context)
+
     search_query = process_query(query)
 
     expanded_query = []
     if len(search_query) == 0:
-        existing_expanded_terms = Term.objects.filter(term__in=vague_searcher.expand_terms(query))
+
+        # try to get expanded terms from cache
+        term_cache_key = f'term_expansion_{query}'
+        cached_expanded_terms = term_expansion_cache.get(term_cache_key)
+
+        if cached_expanded_terms is not None:
+            existing_expanded_terms = cached_expanded_terms
+        else:
+            existing_expanded_terms = Term.objects.filter(term__in=vague_searcher.expand_terms(query))
+            expanded_query = vague_searcher.expand_terms([query])
+            # Cache the expanded terms
+            term_expansion_cache.set(term_cache_key, expanded_query, timeout=60 * 60)
+
         vague_search = True
         search_query = list(set(search_query + list(existing_expanded_terms)))
         expanded_query = [q.term for q in search_query]
@@ -205,8 +244,11 @@ def search_results(request):
                 'title': link.to_document.title,
             })
 
-        keywords = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by('-tf').values_list(
+        keywords_db = InvertedIndex.objects.filter(document_id=doc.id).select_related('term').order_by(
+            '-tf').values_list(
             'term__term', flat=True)[:5]
+
+        keywords = [keyword for keyword in keywords_db]
 
         # GENAI label judgement
         description_ai = False
@@ -223,7 +265,7 @@ def search_results(request):
             'url': doc.url,
             'snippet': description,
             'desc_ai': description_ai,
-            'last_modify': doc.last_modify,
+            'last_modify': str(doc.last_modify),
             'size': doc.page_size,
             'keywords': keywords,
             'from_docs': from_docs,
@@ -242,7 +284,17 @@ def search_results(request):
         'expanded_query': expanded_query,
         'time_consumption': f"{end - start:.4f}",
         'pages': pages,
+        'cache_hit': False,
     }
+
+    save_context = {
+        'query': query,
+        'pages': pages,
+    }
+    # print(save_context)
+
+    # Cache the search results
+    search_results_cache.set(cache_key, json.dumps(save_context), timeout=60 * 60)
 
     return render(request, 'search_results.html', context)
 
