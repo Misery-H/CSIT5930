@@ -302,7 +302,40 @@ def search_results(request):
 def ai_analysis(request):
     query = request.GET.get('q', '')
 
-    return StreamingHttpResponse(aliyun_helper.chat_complete_stream(query))
+    # try to get result from cache
+    cache_key = f'search_results_{query}'
+    cached_results = search_results_cache.get(cache_key)
+
+    # Try 3 times
+    attempt_times = 3
+
+    while cached_results is None and attempt_times > 0:
+        time.sleep(1)
+        print(f"Try {4 - attempt_times} to fetch search result from redis")
+        cached_results = search_results_cache.get(cache_key)
+
+    documents = ""
+    if cached_results is not None:
+        # Use top 5 results
+        top_docs = 5
+
+        context = json.loads(cached_results)
+        pages = context["pages"]
+
+        for index, doc in enumerate(pages):
+            if top_docs <= 0:
+                break
+            document = Document.objects.get(id=doc["id"]).content
+            documents += f"Document {index}: {document}\n"
+            top_docs -= 1
+
+    prompt = f"""
+    {aliyun_helper.PROMPT_TEMPLATE}
+    Query: {query}
+    Documents: {documents}
+    """
+
+    return StreamingHttpResponse(aliyun_helper.chat_complete_stream(prompt))
 
 
 def pages(request, page_number=1):

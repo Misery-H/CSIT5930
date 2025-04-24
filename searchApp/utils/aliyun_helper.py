@@ -6,9 +6,28 @@ client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
 )
 
+PROMPT_TEMPLATE = """
+You are an intelligent summarization engine. Given a user query and the top documents retrieved by a search engine, your task is to write a concise, coherent, and informative conclusion that directly answers the query based on the information found in the documents.
 
-def chat_complete_stream(content):
-    prompt = "Please conclude the following content in 100 words:{}".format(content)
+Instructions:
+
+**DO NOT start any sentence with phrases like "The documents...", "The query...", or similar meta-commentary.**
+
+Focus only on the information from the documents.
+
+Identify key insights or consensus points relevant to the query.
+
+If the documents disagree, briefly reflect both views.
+
+Do not add any new or external information.
+
+Keep the tone neutral and factual.
+
+Give your summarization without explanation and explicit refer to specific documents
+
+"""
+
+def chat_complete_stream(prompt):
     print(f"Start asking ai using Aliyun: {prompt}")
     answer_content = ""
 
