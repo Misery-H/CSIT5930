@@ -6,12 +6,14 @@
     padding-left: 20px;
     padding-right: 20px;
     gap: 30px;
+    z-index: 1000;
 }
 
 .results-footer {
     line-height: 1.6;
-    position: flex;
+    position: relative;
     font-family: "Outfit", serif;
+    margin-top: 100px;
     top: 0;
     left: 0;
     right: 0;
@@ -40,6 +42,104 @@
 .logo-container {
     display: flex;
     width: 100%;
-    padding: 20px 0;
+    padding: 100px 0;
     justify-content: center;
+    z-index: 1000
+}
+
+.title-container {
+    font-size: 30px;
+    font-weight: bold;
+    z-index: 1000;
+}
+
+.paragraph-container {
+    margin-left: 1px;
+    font-size: 18px;
+    z-index: 1000;
+}
+
+.normal-container {
+    z-index: 1000;
+}
+
+
+.github-card-container {
+    z-index: 1000;
+}
+
+.plain-link {
+    color: black;
+    text-underline: none;
+    z-index: 1500;
+}
+
+.markdown-container {
+    background: rgba(246, 248, 250, 0.82);
+    border: #f6f8fa;
+    border-radius: 10px;
+    padding: 0;
+}
+
+.markdown-title {
+    width: 100%;
+    font-size: 15px;
+    color: #70757a;
+    font-family: "Outfit", serif;
+    padding: 10px;
+}
+
+.markdown-title a {
+    font-size: 15px;
+    color: #70757a;
+    font-family: "Outfit", serif;
+    text-decoration: none;
+}
+
+.markdown-content {
+    font-size: 20px;
+    color: #202124;
+    padding: 20px;
+}
+
+.markdown-content h1 {
+    font-size: 33px;
+    font-family: "Outfit", serif;
+}
+
+.markdown-content h2 {
+    font-size: 30px;
+    font-family: "Outfit", serif;
+}
+
+
+.markdown-content h3 {
+    font-size: 28px;
+    font-family: "Outfit", serif;
+}
+
+.markdown-content h4 {
+    font-size: 25px;
+    font-family: "Outfit", serif;
+}
+
+.markdown-content h5 {
+    font-size: 22px;
+    font-family: "Outfit", serif;
+}
+
+.markdown-content h6 {
+    font-size: 26px;
+    font-family: "Outfit", serif;
+}
+
+.markdown-content code {
+    background: white;
+    border-radius: 2px;
+    font-family: Consolas, serif;
+}
+
+.markdown-content img {
+    border-radius: 5px;
+    margin-top: 5px;
 }
