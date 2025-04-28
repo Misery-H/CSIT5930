@@ -306,12 +306,13 @@ def ai_analysis(request):
     cached_results = search_results_cache.get(cache_key)
 
     # Try 3 times
-    attempt_times = 3
+    attempt_times = 5
 
     while cached_results is None and attempt_times > 0:
         time.sleep(1)
-        print(f"Try {4 - attempt_times} to fetch search result from redis")
+        print(f"Try {6 - attempt_times} to fetch search result from redis with key = {cache_key}")
         cached_results = search_results_cache.get(cache_key)
+        attempt_times -= 1
 
     documents = ""
     if cached_results is not None:

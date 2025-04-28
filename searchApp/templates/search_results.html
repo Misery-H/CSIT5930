@@ -332,7 +332,11 @@
         const aiContent = document.getElementById('ai-content');
         aiContent.innerHTML = ''; // Clear previous content
 
-        fetch(`{% url 'ai_analysis' %}?q=${encodeURIComponent(query)}`)
+        fetch(`{% url 'ai_analysis' %}?q=${encodeURIComponent(query)}`, {
+            headers: {
+                'Accept': 'text/event-stream'  // Add Accept header
+            }
+        })
             .then(response => {
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
